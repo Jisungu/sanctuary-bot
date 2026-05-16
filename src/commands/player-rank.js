@@ -4,14 +4,14 @@ const Player = require('../models/Player');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('player-rank')
-        .setDescription('Définit le niveau Tekken d’un joueur.')
+        .setDescription('Définit le niveau d\'un joueur pour l\'équilibrage.')
         .addUserOption(option => 
             option.setName('joueur')
                 .setDescription('Le joueur à évaluer')
                 .setRequired(true))
         .addIntegerOption(option => 
             option.setName('niveau')
-                .setDescription('Choisir le rang du joueur')
+                .setDescription('Choisir le niveau du joueur')
                 .setRequired(true)
                 .addChoices(
                     { name: '1 - Débutant', value: 1 },

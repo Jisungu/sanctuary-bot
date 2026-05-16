@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const Player = require('../models/Player');
 const Battle = require('../models/Battle');
+require('dotenv').config();
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -21,7 +22,7 @@ module.exports = {
         const team1Name = interaction.options.getString('equipe1');
         const team2Name = interaction.options.getString('equipe2');
         const viesInitiales = interaction.options.getInteger('vies');
-        const categoryId = "1478028063878152212"; 
+        const categoryId = process.env.CATEGORY_VOCAL_ID; 
 
         try {
             const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'calling' }).sort({ createdAt: -1 });

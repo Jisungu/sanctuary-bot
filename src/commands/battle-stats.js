@@ -99,6 +99,15 @@ module.exports = {
             const favCharVal = Object.entries(myChars).sort((a, b) => b[1] - a[1])[0]?.[0];
             const favStageVal = Object.entries(myStages).sort((a, b) => b[1] - a[1])[0]?.[0];
 
+            if (battlesPlayed === 0) {
+                embed.setTitle(`👤 Profil : ${target.username}`)
+                    .setColor('#95a5a6')
+                    .setThumbnail(target.displayAvatarURL())
+                    .setDescription(`📜 **Ce Chevalier n'a pas encore mené d'assaut dans l'arène.**\nSes statistiques s'éveilleront dès sa première participation à une Guerre Sainte.`);
+                
+                return interaction.editReply({ embeds: [embed] });
+            }
+
             embed.setTitle(`👤 Profil : ${target.username}`)
                 .setColor('#3498db')
                 .setThumbnail(target.displayAvatarURL())

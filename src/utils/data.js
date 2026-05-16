@@ -49,7 +49,7 @@ module.exports = {
         { label: 'Coliseum of Fate', value: 'coliseum_of_fate' },
         { label: 'Descent into Subconscious', value: 'descent_into_subconscious' },
         { label: 'Elegant Palace', value: 'elegant_palace' },
-        { label: 'Fallen Destiny', value: 'fallen_estiny' },
+        { label: 'Fallen Destiny', value: 'fallen_destiny' },
         { label: 'Genmaji Temple', value: 'genmaji_temple' },
         { label: 'Into the Stratosphere', value: 'into_the_stratosphere' },
         { label: 'Midnight Siege', value: 'midnight_siege' },

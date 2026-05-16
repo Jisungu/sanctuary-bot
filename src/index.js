@@ -143,6 +143,22 @@ client.on('interactionCreate', async interaction => {
                 battle.currentMatch = undefined; 
                 battle.markModified('viesActuelles');
 
+                if (Math.max(0, currentLives - 1) === 0) {
+                    const koEmbed = new EmbedBuilder()
+                        .setTitle('💀 EXTINCTION DE COSMOS - K.O.')
+                        .setDescription(`Le Chevalier <@${loserId}> a vu son armure se briser ! Ses **${battle.viesParJoueur}** éclats de Cosmos se sont éteints...`)
+                        .setColor('#c0392b')
+                        .addFields({ 
+                            name: '🔮 Statut du Guerrier', 
+                            value: `<@${loserId}> est définitivement **ÉLIMINÉ** de cette Guerre Sainte.` 
+                        })
+                        .setFooter({ text: 'Son sacrifice restera gravé dans les chroniques du Sanctuaire.' })
+                        .setTimestamp();
+
+                    // On l'envoie de manière asynchrone pour marquer la fin du joueur dans le salon
+                    await interaction.channel.send({ embeds: [koEmbed] });
+                }
+
                 const t1Lives = battle.teams.team1.players.reduce((acc, id) => acc + (battle.viesActuelles.get(id.toString()) || 0), 0);
                 const t2Lives = battle.teams.team2.players.reduce((acc, id) => acc + (battle.viesActuelles.get(id.toString()) || 0), 0);
 
@@ -155,23 +171,39 @@ client.on('interactionCreate', async interaction => {
 
                     const winnersList = winningTeam.players.map(id => {
                         const lives = battle.viesActuelles.get(id.toString()) || 0;
-                        return `${lives > 0 ? '🛡️' : '💀'} <@${id}> : ${'❤️'.repeat(lives)}${'🖤'.repeat(battle.viesParJoueur - lives)}`;
+                        const totalLives = battle.viesParJoueur;
+        
+                        if (lives > 0) {
+                            return `🛡️ <@${id}> : ${'❤️'.repeat(lives)}${'🖤'.repeat(totalLives - lives)} (**Survivant**)`;
+                        } else {
+                            return `💀 <@${id}> : ${'🖤'.repeat(totalLives)} (**Éliminé**)`;
+                        }
                     }).join('\n');
 
                     await battle.save();
                     await interaction.deleteReply();
 
                     const victoryEmbed = new EmbedBuilder()
-                        .setTitle('🏆 LE SANCTUAIRE A SES VAINQUEURS')
-                        .setDescription(`L'armée **${winningTeam.name}** a triomphé !`)
-                        .setColor('#f1c40f')
+                        .setTitle('🏆 LE SANCTUAIRE A SES VAINQUEURS !')
+                        .setDescription(`🔥 **L'armée ${winningTeam.name} a triomphé de la Guerre Sainte !** 🔥\n\nAprès d'âpres duels et des éclats de Cosmos mémorables, le destin s'est enfin scellé. L'arène s'apaise et les vainqueurs s'élèvent sous les acclamations du Sanctuaire !`)
+                        .setColor('#f1c40f') // Or flamboyant
                         .addFields(
-                            { name: `👥 Membres de l'armée ${winningTeam.name}`, value: winnersList, inline: false },
-                            { name: '🎖️ Étoile Polaire (MVP)', value: `<@${mvpId}> avec **${stats[mvpId] || 0}** victoires`, inline: false }
-                        );
+                            { 
+                                name: `👥 Chroniques de l'Armée ${winningTeam.name}`, 
+                                value: winnersList, 
+                                inline: false 
+                            },
+                            { 
+                                name: '🎖️ Étoile Polaire — Le MVP du Tournoi', 
+                                value: `⭐ <@${mvpId}> avec un total dévastateur de **${stats[mvpId] || 0}** victoires ! Son Cosmos a guidé son équipe vers les sommets.`, 
+                                inline: false 
+                            }
+                        )
+                        .setFooter({ text: 'La Guerre Sainte est terminée. Que la paix règne sur le Sanctuaire jusqu\'au prochain appel.' })
+                        .setTimestamp();
+
                     return await interaction.channel.send({ embeds: [victoryEmbed] });
                 }
-
                 await battle.save();
                 await interaction.deleteReply();
                 await sendBattleStatus(interaction);
