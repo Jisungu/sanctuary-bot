@@ -11,7 +11,7 @@ module.exports = {
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('heure')
-                .setDescription('L\'heure du rassemblement (ex: 21h00)')
+                .setDescription('L\'heure du rassemblement (ex: 21:00)')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

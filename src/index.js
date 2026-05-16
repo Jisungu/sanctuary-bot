@@ -5,6 +5,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Battle = require('./models/Battle');
 const { characters, stages } = require('./utils/data'); 
+const express = require('express');
+const app = express();
+app.get('/', (req, res) => res.send('Le Sanctuaire est en ligne !'));
+app.listen(process.env.PORT || 3000);
 
 const client = new Client({
     intents: [
