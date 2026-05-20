@@ -4,14 +4,14 @@ const Battle = require('../models/Battle');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('battle-create')
-        .setDescription('Prophétise une nouvelle Guerre Sainte et ouvre les inscriptions.')
+        .setDescription('Planifie la Guerre Sainte et ouvre les inscriptions publiques.')
         .addStringOption(option => 
             option.setName('date')
                 .setDescription('Format: JJ/MM/AAAA (ex: 15/05/2026)')
                 .setRequired(true))
         .addStringOption(option => 
             option.setName('heure')
-                .setDescription('L\'heure du rassemblement (ex: 21:00)')
+                .setDescription('Format: HH:mm (ex: 21:00)')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

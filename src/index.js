@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
 const mongoose = require('mongoose');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -45,7 +45,7 @@ async function sendBattleStatus(interaction) {
         const stageLabel = stages.find(s => s.value === lastDuel.stage)?.label || lastDuel.stage;
 
         embed.addFields({
-            name: `🏟️ Lieu du combat : ${stageLabel}`,
+            name: `Stage : ${stageLabel}`,
             value: `🏆 **Vainqueur :** <@${lastDuel.winnerId}> (${charWinLabel})\n💀 **Vaincu :** <@${lastDuel.loserId}> (${charLosLabel})`,
             inline: false
         });
@@ -122,7 +122,7 @@ client.on('interactionCreate', async interaction => {
             } catch (err) { console.error("Erreur bouton Sanctuaire:", err); }
         }
         
-       if (customId.startsWith('win_')) {
+        if (customId.startsWith('win_')) {
             try {
                 await interaction.deferUpdate();
 
@@ -139,6 +139,7 @@ client.on('interactionCreate', async interaction => {
                     winnerChar: isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2, 
                     loserChar: isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1, 
                     stage: battle.currentMatch.stage,
+                    isPhoenix: false, // Match classique
                     timestamp: new Date() 
                 });
 
@@ -148,18 +149,36 @@ client.on('interactionCreate', async interaction => {
                 battle.markModified('viesActuelles');
 
                 if (Math.max(0, currentLives - 1) === 0) {
-                    const koEmbed = new EmbedBuilder()
-                        .setTitle('💀 EXTINCTION DE COSMOS - K.O.')
-                        .setDescription(`Le Chevalier <@${loserId}> a vu son armure se briser ! Ses **${battle.viesParJoueur}** éclats de Cosmos se sont éteints...`)
-                        .setColor('#c0392b')
-                        .addFields({ 
-                            name: '🔮 Statut du Guerrier', 
-                            value: `<@${loserId}> est définitivement **ÉLIMINÉ** de cette Guerre Sainte.` 
-                        })
-                        .setFooter({ text: 'Son sacrifice restera gravé dans les chroniques du Sanctuaire.' })
-                        .setTimestamp();
+                    const warriorPhoenixMatch = battle.history.find(match => match.winnerId === loserId.toString() && match.isPhoenix === true);
 
-                    // On l'envoie de manière asynchrone pour marquer la fin du joueur dans le salon
+                    let koEmbed = new EmbedBuilder().setTimestamp();
+
+                    if (warriorPhoenixMatch) {
+                        koEmbed
+                            .setTitle('🌋 EXTINCTION DÉFINITIVE - LE PHOENIX SE CONSUME')
+                            .setDescription(
+                                `**Le miracle a pris fin sous les yeux d'Athéna !**\n\n` +
+                                `Le Chevalier <@${loserId}>, qui s'était pourtant arraché des griffes des Enfers grâce aux ailes du Phoenix, a vu ses dernières forces l'abandonner.\n\n` +
+                                `Son armure tombe en cendres, et cette fois-ci, aucun Cosmos ne pourra le ramener...`
+                            )
+                            .setColor('#7f8c8d')
+                            .addFields({ 
+                                name: '🔮 Verdict du Grand Pope', 
+                                value: `<@${loserId}> a brûlé son ultime étincelle de vie. Il est **définitivement éliminé**.` 
+                            })
+                            .setFooter({ text: 'Les cendres se dispersent sur le champ de bataille.' });
+                    } else {
+                        koEmbed
+                            .setTitle('💀 EXTINCTION DE COSMOS - K.O.')
+                            .setDescription(`Le Chevalier <@${loserId}> a vu son armure se briser ! Ses **${battle.viesParJoueur}** éclats de Cosmos se sont éteints...`)
+                            .setColor('#c0392b')
+                            .addFields({ 
+                                name: '🔮 Statut du Guerrier', 
+                                value: `<@${loserId}> est définitivement **ÉLIMINÉ** de cette Guerre Sainte.` 
+                            })
+                            .setFooter({ text: 'Son sacrifice restera gravé dans les chroniques du Sanctuaire.' });
+                    }
+
                     await interaction.channel.send({ embeds: [koEmbed] });
                 }
 
@@ -190,7 +209,7 @@ client.on('interactionCreate', async interaction => {
                     const victoryEmbed = new EmbedBuilder()
                         .setTitle('🏆 LE SANCTUAIRE A SES VAINQUEURS !')
                         .setDescription(`🔥 **L'armée ${winningTeam.name} a triomphé de la Guerre Sainte !** 🔥\n\nAprès d'âpres duels et des éclats de Cosmos mémorables, le destin s'est enfin scellé. L'arène s'apaise et les vainqueurs s'élèvent sous les acclamations du Sanctuaire !`)
-                        .setColor('#f1c40f') // Or flamboyant
+                        .setColor('#f1c40f') 
                         .addFields(
                             { 
                                 name: `👥 Chroniques de l'Armée ${winningTeam.name}`, 
@@ -208,10 +227,126 @@ client.on('interactionCreate', async interaction => {
 
                     return await interaction.channel.send({ embeds: [victoryEmbed] });
                 }
+                
                 await battle.save();
                 await interaction.deleteReply();
                 await sendBattleStatus(interaction);
+
+                if (!battle.phoenixUsed) {
+                    const t1Eliminated = battle.teams.team1.players.filter(id => (battle.viesActuelles.get(id.toString()) || 0) === 0).length;
+                    const t2Eliminated = battle.teams.team2.players.filter(id => (battle.viesActuelles.get(id.toString()) || 0) === 0).length;
+
+                    let phoenixTriggered = false;
+                    let teamInNeed = null;
+
+                    if (t1Eliminated === 2 && t2Eliminated === 1) {
+                        phoenixTriggered = true;
+                        teamInNeed = battle.teams.team1;
+                    } else if (t2Eliminated === 2 && t1Eliminated === 1) {
+                        phoenixTriggered = true;
+                        teamInNeed = battle.teams.team2;
+                    }
+
+                    if (phoenixTriggered) {
+                        const autoPhoenixEmbed = new EmbedBuilder()
+                            .setTitle('🔥 L\'ALERTE DU PHOENIX S\'ÉVEILLE !')
+                            .setDescription(
+                                `⚡ **Le Cosmos d'Ikki embrase l'arène du Sanctuaire !** ⚡\n\n` +
+                                `La structure des forces vacille. L'armée **${teamInNeed.name}** est en grande difficulté avec 2 Chevaliers tombés contre seulement 1 côté adverse.\n\n` +
+                                `Les cieux s'ouvrent : le destin vous accorde un duel de repêchage !`
+                            )
+                            .setColor('#e67e22')
+                            .addFields({ 
+                                name: '📜 Procédure pour le TO', 
+                                value: `Les équipes doivent choisir leur Chevalier déchu pour disputer le duel de la dernière chance.\n\n` +
+                                    `➡️ **Lancez le match avec :**\n\`/battle-phoenix\`` 
+                            })
+                            .setTimestamp();
+
+                        await interaction.channel.send({ embeds: [autoPhoenixEmbed] });
+                    }
+                }
             } catch (err) { console.error("Erreur victoire:", err); }
+        }
+
+        if (interaction.customId.startsWith('phoenix_win_')) {
+            if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                return interaction.reply({ content: "📜 Seul le Grand Pope (TO/Admin) peut sceller ce destin.", ephemeral: true });
+            }
+
+            await interaction.deferUpdate();
+
+            const parts = interaction.customId.split('_');
+            const winnerId = parts[3].toString(); 
+            const loserId = parts[5].toString();
+
+            try {
+                const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+                if (!battle) return;
+
+                battle.phoenixUsed = true;
+
+                const originalEmbed = interaction.message.embeds[0];
+                const description = originalEmbed?.description || '';
+                const stageLine = description.split('\n')[0] || '';
+                const extractedStageLabel = stageLine.replace('**Stage :**', '').trim();
+                
+                const stageObj = stages.find(s => s.label.toLowerCase() === extractedStageLabel.toLowerCase());
+                const stageValue = stageObj ? stageObj.value : 'enfers';
+
+                const fields = originalEmbed?.fields || [];
+                const p1Field = fields[0]?.value || '';
+                const p2Field = fields[2]?.value || '';
+                
+                const extractedChar1Label = p1Field.split('\n')[1]?.replace(/\*/g, '').trim() || 'Chevalier';
+                const extractedChar2Label = p2Field.split('\n')[1]?.replace(/\*/g, '').trim() || 'Chevalier';
+
+                const char1Obj = characters.find(c => c.label.toLowerCase() === extractedChar1Label.toLowerCase());
+                const char2Obj = characters.find(c => c.label.toLowerCase() === extractedChar2Label.toLowerCase());
+                
+                const char1Value = char1Obj ? char1Obj.value : extractedChar1Label;
+                const char2Value = char2Obj ? char2Obj.value : extractedChar2Label;
+
+                const isWinnerP1 = interaction.customId.includes(`phoenix_win_p1_`);
+                const winnerChar = isWinnerP1 ? char1Value : char2Value;
+                const loserChar = isWinnerP1 ? char2Value : char1Value;
+
+                battle.history.push({ 
+                    winnerId, 
+                    loserId, 
+                    winnerChar: winnerChar,
+                    loserChar: loserChar,
+                    stage: stageValue,
+                    isPhoenix: true,
+                    timestamp: new Date()
+                });
+
+                battle.viesActuelles.set(winnerId, 1);
+                battle.markModified('viesActuelles');
+                await battle.save();
+
+                const updatedEmbed = EmbedBuilder.from(originalEmbed)
+                    .setTitle('🔥 LE PHOENIX RENAÎT DE SES CENDRES ! 🔥')
+                    .setDescription(
+                        `**L'impossible s'est produit au cœur des Enfers !**\n\n` +
+                        `Alors que tout espoir semblait perdu, le Cosmos d'Ikki a brisé les chaînes du destin. ` +
+                        `Baigné dans les flammes de l'immortalité, **🏆 <@${winnerId}>** se relève, son armure restaurée et son Cosmos ravivé !\n\n` +
+                        `⚡ Il réintègre la Guerre Sainte doté d'**1 éclat de Cosmos (❤️)** !\n\n` +
+                        `💀 Malgré une lutte héroïque, <@${loserId}> est renvoyé dans les profondeurs du Tartare.`
+                    )
+                    .setFields([])
+                    .setColor('#e67e22')
+                    .setTimestamp()
+                    .setFooter({ text: 'Le Grand Pope scelle le destin !' });
+
+                await interaction.message.edit({ embeds: [updatedEmbed], components: [] });
+
+                await sendBattleStatus(interaction);
+
+            } catch (error) {
+                console.error("Erreur lors du phoenix-conversion :", error);
+                return;
+            }
         }
     }
 });

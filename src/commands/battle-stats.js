@@ -57,7 +57,7 @@ module.exports = {
                 .setColor('#f1c40f')
                 .addFields(
                     { name: '📊 Activité', value: `🏰 **${allBattles.length}** Guerres Saintes\n⚔️ **${totalDuels}** Duels livrés`, inline: true },
-                    { name: '🔥 Tendances', value: `👤 Perso : **${getLabel(topCharVal, characters)}**\n🏟️ Stage : **${getLabel(topStageVal, stages)}**`, inline: true },
+                    { name: '🔥 Tendances', value: `👤 Perso le plus joué : **${getLabel(topCharVal, characters)}**\n🏟️ Stage le plus joué : **${getLabel(topStageVal, stages)}**`, inline: true },
                     { name: '🥇 Top 3 Fidélité', value: topPlayers || "Données insuffisantes", inline: false }
                 );
 
@@ -112,7 +112,7 @@ module.exports = {
                 .setColor('#3498db')
                 .setThumbnail(target.displayAvatarURL())
                 .addFields(
-                    { name: '🏆 Carrière', value: `🏰 **${battlesPlayed}** Tournois (**${battlesWon}** victoires)\n⚔️ Winrate : **${Math.round((duelsWon/(duelsWon+duelsLost || 1))*100)}%**`, inline: false },
+                    { name: '🏆 Carrière', value: `🏰 **${battlesPlayed}** Guerres Saintes (**${battlesWon}** victoires)\n⚔️ Winrate : **${Math.round((duelsWon/(duelsWon+duelsLost || 1))*100)}%**`, inline: false },
                     { name: '⚔️ Bilan Duels', value: `✅ Gagnés : **${duelsWon}**\n❌ Perdus : **${duelsLost}**`, inline: true },
                     { name: '🎭 Habitudes', value: `🥋 Perso : **${getLabel(favCharVal, characters)}**\n🏟️ Stage : **${getLabel(favStageVal, stages)}**`, inline: true }
                 );

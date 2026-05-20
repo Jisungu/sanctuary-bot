@@ -49,8 +49,10 @@ const battleSchema = new mongoose.Schema({
         winnerChar: String,
         loserChar: String,
         stage: String,
+        isPhoenix: { type: Boolean, default: false },
         timestamp: { type: Date, default: Date.now }
-    }]
+    }],
+    phoenixUsed: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Battle', battleSchema);

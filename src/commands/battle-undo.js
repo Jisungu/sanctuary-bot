@@ -5,14 +5,13 @@ const { characters, stages } = require('../utils/data');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('battle-undo')
-        .setDescription('Annule le résultat du dernier duel et rend la vie au vaincu.')
+        .setDescription('Annule le résultat du dernier duel (Match classique ou Phoenix) et restaure le temps.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: false });
 
         try {
-            // On cherche la battle en cours
             const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
 
             if (!battle) {
@@ -23,48 +22,59 @@ module.exports = {
                 return interaction.editReply("📜 L'historique de cette Guerre Sainte est vide. Impossible de revenir en arrière.");
             }
 
-            // 1. Récupérer et retirer le dernier duel de l'historique
             const lastMatch = battle.history.pop();
+            const winnerId = lastMatch.winnerId.toString();
             const loserId = lastMatch.loserId.toString();
 
-            // 2. Redonner une vie au perdant (sans dépasser la limite initiale)
-            const currentLives = battle.viesActuelles.get(loserId) ?? 0;
-            const restoredLives = Math.min(battle.viesParJoueur, currentLives + 1);
-            battle.viesActuelles.set(loserId, restoredLives);
+            const undoEmbed = new EmbedBuilder()
+                .setTitle('⏳ Distorsion Temporelle - Annulation')
+                .setColor('#9b59b6')
+                .setTimestamp();
 
-            // 3. Reset le match actuel pour éviter les conflits
+            if (lastMatch.isPhoenix === true) {
+                battle.viesActuelles.set(winnerId, 0);
+                battle.phoenixUsed = false;
+                undoEmbed.setDescription(`**Le miracle du Phoenix a été révoqué par décret divin !**`)
+                    .addFields(
+                        { 
+                            name: '❌ Duel Phoenix Annulé', 
+                            value: `🏆 **Vainqueur déchu :** <@${winnerId}>\n💀 **Vaincu des Enfers :** <@${loserId}>` 
+                        },
+                        {
+                            name: '🔮 Statut des Vies',
+                            value: `<@${winnerId}> perd sa jauge salvatrice et retourne à **0 vie (🖤)**. La règle du Phoenix est de nouveau disponible !`
+                        }
+                    )
+                    .setFooter({ text: 'Les Enfers se referment. Utilisez /battle-phoenix si vous devez relancer ce duel.' });
+            } else {
+                const currentLives = battle.viesActuelles.get(loserId) ?? 0;
+                const restoredLives = Math.min(battle.viesParJoueur, currentLives + 1);
+                battle.viesActuelles.set(loserId, restoredLives);
+
+                const charWinLabel = characters.find(c => c.value === lastMatch.winnerChar)?.label || lastMatch.winnerChar;
+                const charLosLabel = characters.find(c => c.value === lastMatch.loserChar)?.label || lastMatch.loserChar;
+
+                undoEmbed.setDescription(`Le dernier affrontement a été effacé des chroniques par décret divin !`)
+                    .addFields(
+                        { 
+                            name: '❌ Duel annulé', 
+                            value: `🏆 **Vainqueur déchu :** <@${winnerId}> (${charWinLabel})\n💀 **Vaincu restauré :** <@${loserId}> (${charLosLabel})` 
+                        },
+                        {
+                            name: '❤️ Restauration',
+                            value: `<@${loserId}> récupère un éclat de Cosmos (Vies actuelles : **${restoredLives}/${battle.viesParJoueur}**)`
+                        }
+                    )
+                    .setFooter({ text: 'Le cours du temps a repris. Utilisez /battle-toss pour relancer un assaut.' });
+            }
+
             battle.currentMatch = undefined;
-
-            // On notifie Mongoose des changements sur le Map
             battle.markModified('viesActuelles');
             battle.markModified('history');
             await battle.save();
 
-            // 4. Traduction des labels pour l'embed
-            const charWinLabel = characters.find(c => c.value === lastMatch.winnerChar)?.label || lastMatch.winnerChar;
-            const charLosLabel = characters.find(c => c.value === lastMatch.loserChar)?.label || lastMatch.loserChar;
-
-            const undoEmbed = new EmbedBuilder()
-                .setTitle('⏳ Distorsion Temporelle - Annulation')
-                .setDescription(`Le dernier affrontement a été effacé des chroniques par décret divin !`)
-                .setColor('#9b59b6') // Violet pour l'effet temporel / magique
-                .addFields(
-                    { 
-                        name: '❌ Duel annulé', 
-                        value: `🏆 **Vainqueur déchu :** <@${lastMatch.winnerId}> (${charWinLabel})\n💀 **Vaincu restauré :** <@${lastMatch.loserId}> (${charLosLabel})` 
-                    },
-                    {
-                        name: '❤️ Restauration',
-                        value: `<@${lastMatch.loserId}> récupère un éclat de Cosmos (Vies actuelles : **${restoredLives}/${battle.viesParJoueur}**)`
-                    }
-                )
-                .setFooter({ text: 'Le cours du temps a repris. Utilisez /battle-toss pour relancer un assaut.' })
-                .setTimestamp();
-
             await interaction.editReply({ embeds: [undoEmbed] });
 
-            // 5. On affiche le statut global mis à jour dans le salon (comme après une victoire)
-            // On importe la fonction ou on reproduit l'affichage
             const statusEmbed = new EmbedBuilder()
                 .setTitle('⚔️ Chroniques du Sanctuaire (Mis à jour)')
                 .setColor('#E67E22')

@@ -30,7 +30,7 @@ module.exports = {
         const tossEmbed = new EmbedBuilder()
             .setTitle('🔥 L\'Horloge du Sanctuaire s\'éveille !')
             .setDescription('Les flammes s\'éteignent une à une... Le destin a tranché !')
-            .setColor('#f1c40f') // Or
+            .setColor('#f1c40f')
             .setThumbnail('https://smallthings.fr/wp-content/uploads/2019/09/cdz_saint_seiya_horloge.jpg')
             .addFields(
                 { 

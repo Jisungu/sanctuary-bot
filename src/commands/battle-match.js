@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
 const { characters, stages } = require('../utils/data');
 
@@ -10,7 +10,8 @@ module.exports = {
         .addStringOption(option => option.setName('char1').setDescription('Personnage du P1').setRequired(true).setAutocomplete(true))
         .addUserOption(option => option.setName('p2').setDescription('Chevalier de la Team 2').setRequired(true))
         .addStringOption(option => option.setName('char2').setDescription('Personnage du P2').setRequired(true).setAutocomplete(true))
-        .addStringOption(option => option.setName('stage').setDescription('Lieu du combat').setRequired(true).setAutocomplete(true)),
+        .addStringOption(option => option.setName('stage').setDescription('Stage du combat').setRequired(true).setAutocomplete(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async autocomplete(interaction) {
         try {
@@ -59,7 +60,7 @@ module.exports = {
 
             const matchEmbed = new EmbedBuilder()
                 .setTitle('⚔️ Choc de Cosmos dans l\'Arène')
-                .setDescription(`Le duel se déroulera à : **${stageLabel}**`)
+                .setDescription(`Le duel se déroulera sur : **${stageLabel}**`)
                 .setColor('#e67e22')
                 .addFields(
                     { name: `🔵 ${battle.teams.team1.name}`, value: `<@${p1.id}>\n**${char1Label}**`, inline: true },
