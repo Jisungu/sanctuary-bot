@@ -12,7 +12,10 @@ module.exports = {
         await interaction.deferReply({ ephemeral: false });
 
         try {
-            const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+            const battle = await Battle.findOne({ 
+                guildId: interaction.guildId, 
+                status: 'started' 
+            }).sort({ createdAt: -1 });
 
             if (!battle) {
                 return interaction.editReply("⚠️ Aucune Guerre Sainte n'est active en ce moment.");

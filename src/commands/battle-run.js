@@ -51,19 +51,24 @@ module.exports = {
                 else { team2.push(p); p2Lvl += p.level; }
             }
 
+            let voice1Id = null;
+            let voice2Id = null;
+
             const category = await interaction.guild.channels.fetch(categoryId).catch(() => null);
             if (category) {
                 try {
-                    await interaction.guild.channels.create({
+                    const chan1 = await interaction.guild.channels.create({
                         name: `🛡️ ${team1Name.toUpperCase()}`,
                         type: ChannelType.GuildVoice,
                         parent: category.id,
                     });
-                    await interaction.guild.channels.create({
+                    const chan2 = await interaction.guild.channels.create({
                         name: `🔱 ${team2Name.toUpperCase()}`,
                         type: ChannelType.GuildVoice,
                         parent: category.id,
                     });
+                    voice1Id = chan1.id;
+                    voice2Id = chan2.id;
                 } catch (e) { console.error("Erreur création salons :", e); }
             }
 
@@ -71,8 +76,8 @@ module.exports = {
             battle.viesParJoueur = viesInitiales;
             battle.presents.forEach(id => battle.viesActuelles.set(id.toString(), viesInitiales));
             battle.teams = {
-                team1: { name: team1Name, players: team1.map(p => p._id), totalLevel: p1Lvl },
-                team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl }
+                team1: { name: team1Name, players: team1.map(p => p._id), totalLevel: p1Lvl, voiceChannelId: voice1Id },
+                team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl, voiceChannelId: voice2Id }
             };
             battle.markModified('viesActuelles');
             await battle.save();

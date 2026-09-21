@@ -1,12 +1,15 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, PermissionFlagsBits } = require('discord.js');
-const mongoose = require('mongoose');
+const { Client, GatewayIntentBits, Collection, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
+const connectDB = require('./utils/db');
 const Battle = require('./models/Battle');
 const { characters, stages } = require('./utils/data'); 
 const express = require('express');
+const Player = require('./models/Player');
+
 const app = express();
+app.disable('x-powered-by');
 app.get('/', (req, res) => res.send('Le Sanctuaire est en ligne !'));
 app.listen(process.env.PORT || 3000);
 
@@ -25,12 +28,10 @@ for (const file of commandFiles) {
     if ('data' in command && 'execute' in command) client.commands.set(command.data.name, command);
 }
 
-mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('✅ Cosmos connecté au Sanctuaire'))
-    .catch(err => console.error('❌ Erreur DB :', err));
+connectDB();
 
 async function sendBattleStatus(interaction) {
-    const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+    const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
     if (!battle) return;
 
     const embed = new EmbedBuilder()
@@ -77,31 +78,44 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.isButton()) {
-        const { customId } = interaction;
-
+        const { customId, guildId, user } = interaction;
         if (['join_battle', 'leave_battle', 'confirm_presence', 'force_presence'].includes(customId)) {
             try {
-                await interaction.deferUpdate();
-
-                const battle = await Battle.findOne({ 
+                const activeBattle = await Battle.findOne({ 
+                    guildId,
                     status: { $in: ['registration', 'calling'] } 
                 }).sort({ createdAt: -1 });
 
-                if (!battle) return;
+                if (!activeBattle) return interaction.deferUpdate();
 
-                if (customId === 'join_battle') {
-                    if (!battle.participants.includes(interaction.user.id)) battle.participants.push(interaction.user.id);
-                } else if (customId === 'leave_battle') {
-                    battle.participants = battle.participants.filter(id => id !== interaction.user.id);
-                } else if (customId === 'confirm_presence') {
-                    if (!battle.presents.includes(interaction.user.id)) battle.presents.push(interaction.user.id);
-                } else if (customId === 'force_presence') {
-                    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return;
-
-                    battle.presents = [...battle.participants];
+                // 🚨 SÉCURITÉ : Bloquer la présence si le joueur n'est pas inscrit
+                if (customId === 'confirm_presence' && !activeBattle.participants.includes(user.id)) {
+                    return interaction.reply({ 
+                        content: "❌ **Accès refusé !** Tu ne peux pas confirmer ta présence car tu ne t'es pas inscrit lors du sondage initial.", 
+                        ephemeral: true 
+                    });
                 }
 
-                await battle.save();
+                await interaction.deferUpdate();
+
+                let updateQuery = {};
+
+                if (customId === 'join_battle') {
+                    updateQuery = { $addToSet: { participants: user.id } };
+                } else if (customId === 'leave_battle') {
+                    updateQuery = { $pull: { participants: user.id, presents: user.id } };
+                } else if (customId === 'confirm_presence') {
+                    updateQuery = { $addToSet: { presents: user.id } };
+                } else if (customId === 'force_presence') {
+                    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return;
+                    updateQuery = { $set: { presents: activeBattle.participants } };
+                }
+
+                const battle = await Battle.findOneAndUpdate(
+                    { _id: activeBattle._id },
+                    updateQuery,
+                    { new: true }
+                );
 
                 const originalEmbed = interaction.message.embeds[0];
                 const updatedEmbed = EmbedBuilder.from(originalEmbed);
@@ -119,15 +133,27 @@ client.on('interactionCreate', async interaction => {
                 }
 
                 await interaction.editReply({ embeds: [updatedEmbed] });
+                
             } catch (err) { console.error("Erreur bouton Sanctuaire:", err); }
         }
         
+        // 2. Gestion des victoires avec restriction Admin/Joueurs concernés
         if (customId.startsWith('win_')) {
             try {
-                await interaction.deferUpdate();
-
-                const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+                const battle = await Battle.findOne({ guildId, status: 'started' }).sort({ createdAt: -1 });
                 if (!battle || !battle.currentMatch) return;
+
+                const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+                const isPlayer = [battle.currentMatch.p1, battle.currentMatch.p2].includes(user.id);
+
+                if (!isAdmin && !isPlayer) {
+                    return interaction.reply({ 
+                        content: "❌ Seuls les Chevaliers engagés dans ce duel ou le Grand Pope peuvent sceller l'issue du combat.", 
+                        ephemeral: true 
+                    });
+                }
+
+                await interaction.deferUpdate();
 
                 const isP1Winner = customId === 'win_p1';
                 const winnerId = isP1Winner ? battle.currentMatch.p1 : battle.currentMatch.p2;
@@ -139,7 +165,7 @@ client.on('interactionCreate', async interaction => {
                     winnerChar: isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2, 
                     loserChar: isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1, 
                     stage: battle.currentMatch.stage,
-                    isPhoenix: false, // Match classique
+                    isPhoenix: false,
                     timestamp: new Date() 
                 });
 
@@ -199,7 +225,7 @@ client.on('interactionCreate', async interaction => {
                         if (lives > 0) {
                             return `🛡️ <@${id}> : ${'❤️'.repeat(lives)}${'🖤'.repeat(totalLives - lives)} (**Survivant**)`;
                         } else {
-                            return `💀 <@${id}> : ${'🖤'.repeat(totalLives)} (**Éliminé**)`;
+                            return `💀 <@${id}> :${'🖤'.repeat(totalLives)} (**Éliminé**)`;
                         }
                     }).join('\n');
 
@@ -266,6 +292,25 @@ client.on('interactionCreate', async interaction => {
                         await interaction.channel.send({ embeds: [autoPhoenixEmbed] });
                     }
                 }
+                // --- MISE À JOUR DES STATISTIQUES DES JOUEURS ---
+                const winChar = isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2;
+                const losChar = isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1;
+
+                // Mise à jour du vainqueur
+                await Player.findByIdAndUpdate(winnerId, {
+                    $inc: { 
+                        'stats.wins': 1,
+                        [`stats.charactersPlayed.${winChar}`]: 1
+                    }
+                }, { upsert: true });
+
+                // Mise à jour du vaincu
+                await Player.findByIdAndUpdate(loserId, {
+                    $inc: { 
+                        'stats.losses': 1,
+                        [`stats.charactersPlayed.${losChar}`]: 1
+                    }
+                }, { upsert: true });
             } catch (err) { console.error("Erreur victoire:", err); }
         }
 
@@ -281,7 +326,7 @@ client.on('interactionCreate', async interaction => {
             const loserId = parts[5].toString();
 
             try {
-                const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+                const battle = await Battle.findOne({ guildId, status: 'started' }).sort({ createdAt: -1 });
                 if (!battle) return;
 
                 battle.phoenixUsed = true;

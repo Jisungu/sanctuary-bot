@@ -37,6 +37,13 @@ module.exports = {
             { returnDocument: 'after' }
         );
 
+        if (!updatedBattle.channelId || !updatedBattle.messageId) {
+            return interaction.reply({ 
+                content: `✅ **${targetUser.username}** ajouté en BDD (aucun message d'annonce associé).`, 
+                flags: [MessageFlags.Ephemeral] 
+            });
+        }
+
         try {
             const channel = await interaction.client.channels.fetch(updatedBattle.channelId);
             const message = await channel.messages.fetch(updatedBattle.messageId);

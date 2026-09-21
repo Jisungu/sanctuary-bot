@@ -1,14 +1,18 @@
 const mongoose = require('mongoose');
 
 const playerSchema = new mongoose.Schema({
-    _id: { type: String, required: true }, 
-    username: String,
-    level: { 
-        type: Number, 
-        default: null,
-        min: 1,
-        max: 5
+    _id: String, // Discord User ID
+    level: { type: Number, required: true },
+    stats: {
+        wins: { type: Number, default: 0 },
+        losses: { type: Number, default: 0 },
+        phoenixCount: { type: Number, default: 0 },
+        charactersPlayed: {
+            type: Map,
+            of: Number,
+            default: {}
+        }
     }
-}, { _id: false });
+}, { timestamps: true });
 
 module.exports = mongoose.model('Player', playerSchema);

@@ -19,12 +19,14 @@ const battleSchema = new mongoose.Schema({
         team1: {
             name: String,
             players: [String],
-            totalLevel: Number
+            totalLevel: Number,
+            voiceChannelId: String // ID du vocal Team 1
         },
         team2: {
             name: String,
             players: [String],
-            totalLevel: Number
+            totalLevel: Number,
+            voiceChannelId: String // ID du vocal Team 2
         }
     },
 

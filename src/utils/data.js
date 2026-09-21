@@ -61,7 +61,6 @@ module.exports = {
         { label: 'Sanctum', value: 'sanctum' },
         { label: 'Seaside Resort', value: 'seaside_resort' },
         { label: 'Secluded Training Ground', value: 'secluded_training_ground' },
-        { label: 'Urban Square', value: 'urban_square' },
         { label: 'Urban Square (Evening)', value: 'urban_square_evening' },
         { label: 'Yakushima', value: 'yakushima' }
     ]
