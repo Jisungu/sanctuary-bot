@@ -22,6 +22,12 @@ const server = http.createServer(app);
 initWebSocket(server);
 
 const PORT = process.env.PORT || 8080;
+
+// Route racine pour Render et les pings de santé
+app.get('/', (req, res) => {
+    res.send('🤖 Bot Discord connecté et fonctionnel !');
+});
+
 server.listen(PORT, () => {
     console.log(`🚀 Serveur HTTP & WebSocket démarré sur le port ${PORT}`);
 });
