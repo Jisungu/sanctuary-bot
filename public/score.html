@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@700;900&family=Open+Sans:wght@700&display=swap" rel="stylesheet">
+    <title>Stream HUD Overlay - Sanctuaire Phoenix Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: transparent;
+            font-family: 'Cinzel', serif;
+            overflow: hidden;
+            width: 1920px;
+            height: 1080px;
+        }
+
+        .stage-canvas {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+        }
+
+        .hud-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0px 170px 0 170px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        /* --- BLOCS LATÉRAUX --- */
+        .side-bar {
+            width: 530px;
+            height: 68px;
+            position: relative;
+            background-color: #080822;
+            box-shadow: inset 0 0 18px rgba(161, 84, 255, 0.4), 0 4px 12px rgba(0, 0, 0, 0.85);
+            border-bottom: 2px solid rgba(161, 84, 255, 0.5);
+            display: flex;
+            align-items: center;
+            background-repeat: no-repeat, no-repeat, repeat-x !important;
+            transition: all 0.5s ease-in-out;
+        }
+
+        /* BARRE GAUCHE */
+        .bar-left {
+            background-image: 
+                radial-gradient(circle at 95% 50%, rgba(161, 84, 255, 0.95) 0%, rgba(76, 26, 140, 0.6) 40%, transparent 80%),
+                radial-gradient(circle at 80% 20%, rgba(37, 117, 252, 0.4) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='35' cy='12' r='0.4' opacity='0.5'/%3E%3Ccircle cx='50' cy='18' r='0.7' opacity='0.8'/%3E%3Ccircle cx='65' cy='32' r='0.5' opacity='0.4'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='90' cy='22' r='0.6' opacity='0.7'/%3E%3Ccircle cx='105' cy='14' r='0.5' opacity='0.5'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='130' cy='8' r='0.4' opacity='0.6'/%3E%3Ccircle cx='145' cy='24' r='0.8' opacity='0.8'/%3E%3Ccircle cx='160' cy='12' r='0.6' opacity='0.4'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3Ccircle cx='185' cy='16' r='0.5' opacity='0.7'/%3E%3Ccircle cx='195' cy='26' r='0.7' opacity='0.5'/%3E%3C/g%3E%3Cg fill='%23a154ff' opacity='0.6'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3Ccircle cx='170' cy='8' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: auto, auto, 200px 50px;
+        }
+
+        /* BARRE DROITE */
+        .bar-right {
+            background-image: 
+                radial-gradient(circle at 5% 50%, rgba(161, 84, 255, 0.95) 0%, rgba(76, 26, 140, 0.6) 40%, transparent 80%),
+                radial-gradient(circle at 20% 20%, rgba(37, 117, 252, 0.4) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='35' cy='12' r='0.4' opacity='0.5'/%3E%3Ccircle cx='50' cy='18' r='0.7' opacity='0.8'/%3E%3Ccircle cx='65' cy='32' r='0.5' opacity='0.4'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='90' cy='22' r='0.6' opacity='0.7'/%3E%3Ccircle cx='105' cy='14' r='0.5' opacity='0.5'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='130' cy='8' r='0.4' opacity='0.6'/%3E%3Ccircle cx='145' cy='24' r='0.8' opacity='0.8'/%3E%3Ccircle cx='160' cy='12' r='0.6' opacity='0.4'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3Ccircle cx='185' cy='16' r='0.5' opacity='0.7'/%3E%3Ccircle cx='195' cy='26' r='0.7' opacity='0.5'/%3E%3C/g%3E%3Cg fill='%23a154ff' opacity='0.6'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3Ccircle cx='170' cy='8' r='1.5'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: auto, auto, 200px 50px;
+        }
+
+        /* Accent Doré pour le score */
+        .gold-accent {
+            position: absolute;
+            top: 0;
+            width: 100px;
+            height: 68px;
+            background: linear-gradient(135deg, #ffe066 0%, #f5af19 40%, #e65c00 70%, #9e3f00 100%);
+            box-shadow: 0 0 14px rgba(245, 175, 25, 0.5);
+            border-bottom: #a74b0e 2px solid;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+
+        .bar-left .gold-accent {
+            right: -15px;
+            transform: skewX(-30deg);
+            transform-origin: top right;
+            margin-right: -25px;
+        }
+
+        .bar-right .gold-accent {
+            left: -15px;
+            transform: skewX(30deg);
+            transform-origin: top left;
+            margin-left: -25px;
+            background: linear-gradient(-135deg, #ffe066 0%, #f5af19 40%, #e65c00 70%, #9e3f00 100%);
+        }
+        
+        .gold-accent-text {
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+        }
+
+        /* --- BLOC CENTRAL --- */
+        .center-block {
+            width: 380px;
+            height: 44px;
+            position: relative;
+            background: linear-gradient(180deg, #441f8c 0%, #1a0b36 80%, #0d041c 100%);
+            clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 25px rgba(161, 84, 255, 0.5);
+            transition: all 0.5s ease-in-out;
+        }
+
+        .center-block::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 2px;
+            background: linear-gradient(180deg, #3f1d81, #bfa3ff 50%, #120930);
+            clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .center-content {
+            font-family: 'Cinzel Decorative', serif;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #ffffff;
+            font-size: 1.4rem;
+            text-shadow: 0 0 12px #a154ff, 0 0 25px rgba(37, 117, 252, 0.8);
+            text-transform: uppercase;
+            transition: text-shadow 0.5s ease-in-out;
+        }
+
+        .inner-content {
+            font-family: 'Cinzel', serif;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            color: white;
+            letter-spacing: 2px;
+            z-index: 2;
+            font-size: 1.6rem;
+            font-weight: 900;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+        }
+        .bar-left .inner-content { justify-content: flex-start; padding-left: 30px; padding-right: 110px; }
+        .bar-right .inner-content { justify-content: flex-end; padding-right: 30px; padding-left: 110px; }
+
+        /* --- CARTES DE JOUEURS (P1 & P2) --- */
+        .player-card {
+            position: absolute;
+            top: 150px;
+            bottom: -68px;
+            width: 320px;
+            height: 58px;
+            background: linear-gradient(135deg, #0d041c 0%, #1a0b36 100%);
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), inset 0 0 12px rgba(161, 84, 255, 0.2);
+            z-index: 5;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .bar-left .player-card {
+            left: 50px;
+            border-radius: 0 0 8px 0;
+            border-left: 4px solid #a154ff;
+            border-bottom: 2px solid rgba(161, 84, 255, 0.6);
+            border-right: 1px solid rgba(161, 84, 255, 0.3);
+        }
+
+        .bar-right .player-card {
+            right: 50px;
+            flex-direction: row-reverse;
+            border-radius: 0 0 0 8px;
+            border-right: 4px solid #a154ff;
+            border-bottom: 2px solid rgba(161, 84, 255, 0.6);
+            border-left: 1px solid rgba(161, 84, 255, 0.3);
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .bar-right .player-info { align-items: flex-end; }
+
+        .player-label {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #a154ff;
+            letter-spacing: 1px;
+            transition: color 0.5s ease;
+        }
+
+        .player-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+        }
+
+        .player-lives-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .bar-left .player-lives-container { align-items: flex-end; }
+        .bar-right .player-lives-container { align-items: flex-start; }
+
+        .lives-label {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #ffd700;
+            letter-spacing: 1px;
+        }
+
+        .player-lives {
+            display: flex;
+            gap: 6px;
+        }
+
+        .heart {
+            font-size: 1.4rem;
+            filter: grayscale(100%) opacity(0.2);
+            transition: all 0.3s ease;
+        }
+
+        .heart.active {
+            filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.9)) grayscale(0%);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        /* ========================================================= */
+        /* 🔥 THEME PHOENIX (RAPPEL COULEURS INCANDESCENTES) 🔥 */
+        /* ========================================================= */
+
+        /* Side-bar sous le signe du Phoenix */
+        .side-bar.phoenix-mode {
+            background-color: #2b0500 !important;
+            border-bottom: 2px solid #ff4500 !important;
+            box-shadow: inset 0 0 22px rgba(255, 69, 0, 0.8), 0 0 15px rgba(255, 140, 0, 0.6) !important;
+        }
+
+        .bar-left.phoenix-mode {
+            background-image: 
+                radial-gradient(circle at 95% 50%, rgba(255, 69, 0, 0.95) 0%, rgba(139, 0, 0, 0.7) 40%, transparent 80%),
+                radial-gradient(circle at 80% 20%, rgba(255, 140, 0, 0.5) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='35' cy='12' r='0.4' opacity='0.5'/%3E%3Ccircle cx='50' cy='18' r='0.7' opacity='0.8'/%3E%3Ccircle cx='65' cy='32' r='0.5' opacity='0.4'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='90' cy='22' r='0.6' opacity='0.7'/%3E%3Ccircle cx='105' cy='14' r='0.5' opacity='0.5'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='130' cy='8' r='0.4' opacity='0.6'/%3E%3Ccircle cx='145' cy='24' r='0.8' opacity='0.8'/%3E%3Ccircle cx='160' cy='12' r='0.6' opacity='0.4'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3Ccircle cx='185' cy='16' r='0.5' opacity='0.7'/%3E%3Ccircle cx='195' cy='26' r='0.7' opacity='0.5'/%3E%3C/g%3E%3Cg fill='%23ff6b00' opacity='0.8'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3Ccircle cx='170' cy='8' r='1.5'/%3E%3C/g%3E%3C/svg%3E") !important;
+        }
+
+        .bar-right.phoenix-mode {
+            background-image: 
+                radial-gradient(circle at 5% 50%, rgba(255, 69, 0, 0.95) 0%, rgba(139, 0, 0, 0.7) 40%, transparent 80%),
+                radial-gradient(circle at 20% 20%, rgba(255, 140, 0, 0.5) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='35' cy='12' r='0.4' opacity='0.5'/%3E%3Ccircle cx='50' cy='18' r='0.7' opacity='0.8'/%3E%3Ccircle cx='65' cy='32' r='0.5' opacity='0.4'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='90' cy='22' r='0.6' opacity='0.7'/%3E%3Ccircle cx='105' cy='14' r='0.5' opacity='0.5'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='130' cy='8' r='0.4' opacity='0.6'/%3E%3Ccircle cx='145' cy='24' r='0.8' opacity='0.8'/%3E%3Ccircle cx='160' cy='12' r='0.6' opacity='0.4'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3Ccircle cx='185' cy='16' r='0.5' opacity='0.7'/%3E%3Ccircle cx='195' cy='26' r='0.7' opacity='0.5'/%3E%3C/g%3E%3Cg fill='%23ff6b00' opacity='0.8'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3Ccircle cx='170' cy='8' r='1.5'/%3E%3C/g%3E%3C/svg%3E") !important;
+        }
+
+        /* Center-block sous le signe du Phoenix */
+        .center-block.phoenix-mode {
+            background: linear-gradient(180deg, #8c1f00 0%, #360a00 80%, #1c0400 100%) !important;
+            box-shadow: 0 5px 25px rgba(255, 69, 0, 0.7) !important;
+        }
+
+        .center-block.phoenix-mode::before {
+            background: linear-gradient(180deg, #812500, #ffb380 50%, #300a00) !important;
+        }
+
+        .center-block.phoenix-mode .center-content {
+            text-shadow: 0 0 12px #ff4500, 0 0 25px rgba(255, 140, 0, 0.9) !important;
+        }
+
+        /* Player Cards sous le signe du Phoenix */
+        .player-card.phoenix-mode {
+            background: linear-gradient(135deg, #1c0300 0%, #3d0a00 100%) !important;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.9), inset 0 0 14px rgba(255, 69, 0, 0.5) !important;
+        }
+
+        .bar-left .player-card.phoenix-mode {
+            border-left: 4px solid #ff4500 !important;
+            border-bottom: 2px solid rgba(255, 140, 0, 0.8) !important;
+            border-right: 1px solid rgba(255, 69, 0, 0.4) !important;
+        }
+
+        .bar-right .player-card.phoenix-mode {
+            border-right: 4px solid #ff4500 !important;
+            border-bottom: 2px solid rgba(255, 140, 0, 0.8) !important;
+            border-left: 1px solid rgba(255, 69, 0, 0.4) !important;
+        }
+
+        .player-card.phoenix-mode .player-label {
+            color: #ff6b00 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stage-canvas">
+        <div class="hud-container">
+
+            <!-- CÔTÉ GAUCHE (JOUEUR 1 / ÉQUIPE 1) -->
+            <div class="side-bar bar-left">
+                <div class="inner-content"></div>
+                <div class="gold-accent"><div class="gold-accent-text"></div></div>
+
+                <div class="player-card">
+                    <div class="player-info">
+                        <span class="player-label">JOUEUR</span>
+                        <span class="player-name"></span>
+                    </div>
+                    <div class="player-lives-container">
+                        <div class="lives-label">VIES</div>
+                        <div class="player-lives"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BLOC CENTRAL -->
+            <div class="center-block">
+                <div class="center-content">Le Sanctuaire</div>
+            </div>
+
+            <!-- CÔTÉ DROIT (JOUEUR 2 / ÉQUIPE 2) -->
+            <div class="side-bar bar-right">
+                <div class="inner-content"></div>
+                <div class="gold-accent"><div class="gold-accent-text"></div></div>
+
+                <div class="player-card">
+                    <div class="player-info">
+                        <span class="player-label">JOUEUR</span>
+                        <span class="player-name"></span>
+                    </div>
+                    <div class="player-lives-container">
+                        <div class="lives-label">VIES</div>
+                        <div class="player-lives"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+<script>
+    // Animation du fond étoilé
+    document.addEventListener("DOMContentLoaded", () => {
+        const barLeft = document.querySelector('.bar-left');
+        const barRight = document.querySelector('.bar-right');
+        let offsetLeft = 0;
+        let offsetRight = 0;
+        const speed = 0.1;
+
+        function animateBackground() {
+            offsetLeft += speed;
+            offsetRight -= speed;
+            if (barLeft) barLeft.style.backgroundPosition = `95% 50%, 80% 20%, ${offsetLeft}px 0px`;
+            if (barRight) barRight.style.backgroundPosition = `5% 50%, 20% 20%, ${offsetRight}px 0px`;
+            requestAnimationFrame(animateBackground);
+        }
+        animateBackground();
+    });
+
+    // Rendu dynamique des cœurs de vie
+    function renderHearts(container, currentLives, maxLives) {
+        container.innerHTML = '';
+        for (let i = 0; i < maxLives; i++) {
+            const heartSpan = document.createElement('span');
+            heartSpan.className = i < currentLives ? 'heart active' : 'heart';
+            heartSpan.textContent = '❤️';
+            container.appendChild(heartSpan);
+        }
+    }
+
+    function connectWebSocket() {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+        
+        // Détection automatique du protocole et de l'hôte
+        const wsProtocol = isLocal ? 'ws:' : 'wss:';
+        const wsHost = isLocal ? 'localhost:8080' : window.location.host;
+
+        const socket = new WebSocket(`${wsProtocol}//${wsHost}`);
+
+        socket.onopen = () => {
+            console.log('✅ Connecté au serveur WebSocket centralisé !');
+        };
+
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (!data || !data.active) return;
+
+            // --- GESTION DU THÈME PHOENIX (TOGGLE DE LA CLASSE CSS) ---
+            const sideBars = document.querySelectorAll('.side-bar');
+            const playerCards = document.querySelectorAll('.player-card');
+            const centerBlock = document.querySelector('.center-block');
+
+            if (data.isPhoenix) {
+                sideBars.forEach(el => el.classList.add('phoenix-mode'));
+                playerCards.forEach(el => el.classList.add('phoenix-mode'));
+                if (centerBlock) centerBlock.classList.add('phoenix-mode');
+            } else {
+                sideBars.forEach(el => el.classList.remove('phoenix-mode'));
+                playerCards.forEach(el => el.classList.remove('phoenix-mode'));
+                if (centerBlock) centerBlock.classList.remove('phoenix-mode');
+            }
+
+            // Noms d'équipe & Scores
+            if (data.team1) {
+                document.querySelector('.bar-left .inner-content').textContent = data.team1.name || "ÉQUIPE 1";
+                document.querySelector('.bar-left .gold-accent-text').textContent = data.team1.score;
+            }
+            if (data.team2) {
+                document.querySelector('.bar-right .inner-content').textContent = data.team2.name || "ÉQUIPE 2";
+                document.querySelector('.bar-right .gold-accent-text').textContent = data.team2.score;
+            }
+
+            // P1
+            const p1Name = document.querySelector('.bar-left .player-name');
+            const p1Lives = document.querySelector('.bar-left .player-lives');
+            const p1Card = document.querySelector('.bar-left .player-card');
+            if (data.p1) {
+                p1Card.style.display = 'flex';
+                p1Name.textContent = data.p1.name;
+                renderHearts(p1Lives, data.p1.lives, data.maxLives);
+            } else {
+                p1Card.style.display = 'none';
+            }
+
+            // P2
+            const p2Name = document.querySelector('.bar-right .player-name');
+            const p2Lives = document.querySelector('.bar-right .player-lives');
+            const p2Card = document.querySelector('.bar-right .player-card');
+            if (data.p2) {
+                p2Card.style.display = 'flex';
+                p2Name.textContent = data.p2.name;
+                renderHearts(p2Lives, data.p2.lives, data.maxLives);
+            } else {
+                p2Card.style.display = 'none';
+            }
+        };
+
+        socket.onclose = () => {
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+
+    connectWebSocket();
+</script>
+</body>
+</html>

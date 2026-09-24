@@ -2,36 +2,47 @@ require('dotenv').config();
 const { Client, GatewayIntentBits, Collection, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
-const connectDB = require('./utils/db');
-const Battle = require('./models/Battle');
-const { characters, stages } = require('./utils/data'); 
 const express = require('express');
-const Player = require('./models/Player');
-const { initWebSocket, broadcastOverlayData } = require('./utils/overlayServer');
 const http = require('http');
 const mongoose = require('mongoose');
 
-// Connexion MongoDB (prend MONGODB_URI dans le .env en local ou sur Render)
+const connectDB = require('./utils/db');
+const Battle = require('./models/Battle');
+const Player = require('./models/Player');
+const { characters, stages } = require('./utils/data'); 
+const { initWebSocket, broadcastOverlayData } = require('./utils/overlayServer');
+
+// 1. CONNEXION MONGODB
 mongoose.connect(process.env.MONGODB_URI);
 
+// 2. CONFIGURATION DU SERVEUR EXPRESS & WEBSOCKET UNIFIÉ
 const app = express();
 app.disable('x-powered-by');
+
+// Déclare le dossier 'public' pour rendre score.html accessible
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Route racine : renvoie directement le fichier d'overlay
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'score.html'));
+});
+
+// Route de check de santé pour Render
+app.get('/health', (req, res) => {
+    res.status(200).send('🤖 Bot & Overlay unifiés en ligne !');
+});
+
 const server = http.createServer(app);
 
-// Initialisation du serveur WebSocket attaché au serveur HTTP principal
+// Initialisation du serveur WebSocket attaché au même serveur HTTP
 initWebSocket(server);
 
 const PORT = process.env.PORT || 8080;
-
-// Route racine pour Render et les pings de santé
-app.get('/', (req, res) => {
-    res.send('🤖 Bot Discord connecté et fonctionnel !');
-});
-
 server.listen(PORT, () => {
     console.log(`🚀 Serveur HTTP & WebSocket démarré sur le port ${PORT}`);
 });
 
+// 3. INITIALISATION DU BOT DISCORD
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -85,6 +96,7 @@ async function sendBattleStatus(interaction) {
     await interaction.channel.send({ embeds: [embed] });
 }
 
+// 4. GESTION DES INTERACTIONS (Slash Commands, Autocomplete, Boutons)
 client.on('interactionCreate', async interaction => {
     if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
@@ -156,7 +168,7 @@ client.on('interactionCreate', async interaction => {
             } catch (err) { console.error("Erreur bouton Sanctuaire:", err); }
         }
         
-        // Gestion des victoires avec restriction Admin/Joueurs concernés
+        // Gestion des victoires
         if (customId.startsWith('win_')) {
             try {
                 const battle = await Battle.findOne({ guildId, status: 'started' }).sort({ createdAt: -1 });
@@ -426,4 +438,5 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.login(process.env.TOKEN);
+// 5. CONNEXION DU BOT DISCORD
+client.login(process.env.DISCORD_TOKEN || process.env.TOKEN);

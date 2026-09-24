@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Overlay Sanctuaire - Animated Background & Team Battle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@700;900&family=Open+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cinzel', serif;
+            overflow: hidden;
+            width: 1920px;
+            height: 1080px;
+            user-select: none;
+            background-color: #04010a;
+            transition: background-color 0.4s ease;
+        }
+
+        /* Transparent mode for OBS Studio capture */
+        body.transparent-mode {
+            background-color: transparent !important;
+            background-image: none !important;
+        }
+
+        body.transparent-mode .stage-background {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .stage-canvas {
+            width: 1920px;
+            height: 1080px;
+            position: relative;
+        }
+
+        .stage-background {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+            background: linear-gradient(180deg, #05020c 0%, #0c041a 50%, #040108 100%);
+            overflow: hidden;
+        }
+
+        /* Glowing nebulae layers with gentle breathing animation */
+        .nebula-glow {
+            position: absolute;
+            inset: -10%;
+            background: 
+                radial-gradient(circle at 50% 25%, rgba(161, 84, 255, 0.28) 0%, transparent 45%),
+                radial-gradient(circle at 20% 50%, rgba(37, 117, 252, 0.22) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(245, 175, 25, 0.18) 0%, transparent 50%),
+                radial-gradient(circle at 50% 85%, rgba(116, 36, 220, 0.25) 0%, transparent 55%);
+            animation: nebulaBreathe 12s ease-in-out infinite alternate;
+            will-change: transform, opacity;
+        }
+
+        @keyframes nebulaBreathe {
+            0% {
+                transform: scale(1) translateY(0);
+                opacity: 0.85;
+            }
+            50% {
+                transform: scale(1.04) translateY(-10px);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1.02) translateY(5px);
+                opacity: 0.9;
+            }
+        }
+
+        /* Slowly floating cosmic dust particles layer 1 */
+        .stars-layer-1 {
+            position: absolute;
+            inset: -20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='30' cy='40' r='0.8' opacity='0.7'/%3E%3Ccircle cx='90' cy='120' r='1.5' opacity='0.8'/%3E%3Ccircle cx='180' cy='60' r='1' opacity='0.6'/%3E%3Ccircle cx='140' cy='220' r='1.8' opacity='0.9'/%3E%3Ccircle cx='280' cy='310' r='0.9' opacity='0.5'/%3E%3Ccircle cx='340' cy='90' r='1.4' opacity='0.75'/%3E%3Ccircle cx='50' cy='320' r='1.2' opacity='0.65'/%3E%3Ccircle cx='230' cy='170' r='0.6' opacity='0.4'/%3E%3C/g%3E%3Cg fill='%23ffd700'%3E%3Ccircle cx='110' cy='65' r='1.2' opacity='0.8'/%3E%3Ccircle cx='270' cy='240' r='1.5' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E");
+            background-repeat: repeat;
+            animation: starsDrift 35s linear infinite;
+            will-change: transform;
+        }
+
+        /* Floating cosmic dust particles layer 2 */
+        .stars-layer-2 {
+            position: absolute;
+            inset: -20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cg fill='%23a154ff'%3E%3Ccircle cx='40' cy='80' r='1.6' opacity='0.6'/%3E%3Ccircle cx='190' cy='210' r='2' opacity='0.5'/%3E%3Ccircle cx='250' cy='50' r='1.3' opacity='0.7'/%3E%3C/g%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='120' cy='150' r='0.9' opacity='0.8'/%3E%3Ccircle cx='290' cy='270' r='1.1' opacity='0.6'/%3E%3C/g%3E%3C/svg%3E");
+            background-repeat: repeat;
+            animation: starsDriftReverse 45s linear infinite;
+            will-change: transform;
+        }
+
+        @keyframes starsDrift {
+            from { transform: translateY(0) translateX(0); }
+            to { transform: translateY(-400px) translateX(-100px); }
+        }
+
+        @keyframes starsDriftReverse {
+            from { transform: translateY(0) translateX(0); }
+            to { transform: translateY(300px) translateX(100px); }
+        }
+
+        /* Subtle pulsing light aura behind the main game frame */
+        .game-backlight {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1060px;
+            height: 600px;
+            background: radial-gradient(ellipse at center, rgba(161, 84, 255, 0.35) 0%, rgba(245, 175, 25, 0.15) 45%, transparent 70%);
+            filter: blur(20px);
+            animation: backlightPulse 4s ease-in-out infinite alternate;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        @keyframes backlightPulse {
+            0% { opacity: 0.6; transform: translateX(-50%) scale(0.98); }
+            100% { opacity: 1; transform: translateX(-50%) scale(1.03); }
+        }
+
+        .top-header-bar {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .center-block {
+            width: 380px;
+            height: 44px;
+            position: relative;
+            background: linear-gradient(180deg, #441f8c 0%, #1a0b36 80%, #0d041c 100%);
+            clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 25px rgba(161, 84, 255, 0.5);
+        }
+
+        .center-block::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 2px;
+            background: linear-gradient(180deg, #3f1d81, #bfa3ff 50%, #120930);
+            clip-path: polygon(0 0, 100% 0, 86% 100%, 14% 100%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .center-content {
+            font-family: 'Cinzel Decorative', serif;
+            font-weight: 900;
+            letter-spacing: 4px;
+            color: #ffffff;
+            font-size: 1.4rem;
+            text-shadow: 0 0 12px #a154ff, 0 0 25px rgba(37, 117, 252, 0.8);
+            text-transform: uppercase;
+        }
+
+        .match-status-tag {
+            background: rgba(13, 4, 28, 0.95);
+            border: 1px solid rgba(161, 84, 255, 0.6);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            padding: 2px 18px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #ffd700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-display-container {
+            position: absolute;
+            top: 135px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1024px;
+            height: 576px; /* 16:9 Aspect Ratio */
+            z-index: 20;
+            padding: 6px;
+            background: #080822;
+            border-radius: 8px;
+            box-shadow: 
+                0 0 35px rgba(161, 84, 255, 0.5),
+                0 15px 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .game-frame-border {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border: 2px solid rgba(161, 84, 255, 0.85);
+            border-radius: 4px;
+            overflow: hidden;
+            background-color: transparent;
+        }
+
+        .game-cutout-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 5, 25, 0.2);
+        }
+
+        .game-cutout-label {
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.85);
+            text-transform: uppercase;
+            background: rgba(8, 8, 34, 0.9);
+            padding: 10px 24px;
+            border-radius: 6px;
+            border: 1px solid rgba(161, 84, 255, 0.6);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Gold corner accents around game frame */
+        .corner-accent {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border: 3px solid #f5af19;
+            z-index: 25;
+            pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(245, 175, 25, 0.9));
+        }
+
+        .corner-top-left { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 6px; }
+        .corner-top-right { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 6px; }
+        .corner-bottom-left { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 6px; }
+        .corner-bottom-right { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
+
+        .team-panel {
+            position: absolute;
+            top: 135px;
+            width: 390px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            z-index: 10;
+        }
+
+        .team-panel-left { left: 30px; }
+        .team-panel-right { right: 30px; }
+
+        /* EN-TÊTE D'ÉQUIPE AVEC FOND ANIMÉ */
+        .team-header-bar {
+            width: 100%;
+            height: 64px;
+            position: relative;
+            background: linear-gradient(125deg, #080822 0%, #2a0a52 35%, #0f225c 70%, #3d165c 100%);
+            background-size: 300% 300%;
+            animation: shimmerHeader 20s ease infinite;
+            border-bottom: 2px solid rgba(161, 84, 255, 0.7);
+            box-shadow: inset 0 0 20px rgba(161, 84, 255, 0.35), 0 8px 18px rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .team-header-bar::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.7'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.8'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.7'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.8'/%3E%3C/g%3E%3Cg fill='%23a154ff' opacity='0.7'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: 200px 50px;
+            animation: floatPattern 18s linear infinite;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .team-header-bar::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #a154ff, #2575fc, #a154ff, transparent);
+            animation: headerGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmerHeader {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes floatPattern {
+            0% { background-position: 0 0; }
+            100% { background-position: 200px 0; }
+        }
+
+        @keyframes headerGlow {
+            0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 2px #a154ff); }
+            50% { opacity: 1; filter: drop-shadow(0 0 8px #2575fc); }
+        }
+
+        .team-left .team-header-bar { justify-content: flex-start; padding-left: 20px; padding-right: 90px; }
+        .team-right .team-header-bar { justify-content: flex-end; padding-right: 20px; padding-left: 90px; }
+
+        .team-header-left {
+            background-image: 
+                radial-gradient(circle at 95% 50%, rgba(161, 84, 255, 0.95) 0%, rgba(76, 26, 140, 0.6) 40%, transparent 80%),
+                radial-gradient(circle at 80% 20%, rgba(37, 117, 252, 0.4) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%23a154ff' opacity='0.6'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: auto, auto, 200px 50px;
+        }
+
+        .team-header-right {
+            background-image: 
+                radial-gradient(circle at 5% 50%, rgba(161, 84, 255, 0.95) 0%, rgba(76, 26, 140, 0.6) 40%, transparent 80%),
+                radial-gradient(circle at 20% 20%, rgba(37, 117, 252, 0.4) 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50' viewBox='0 0 200 50'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='10' cy='8' r='0.5' opacity='0.6'/%3E%3Ccircle cx='25' cy='28' r='1.2' opacity='0.9'/%3E%3Ccircle cx='75' cy='10' r='1.4' opacity='0.95'/%3E%3Ccircle cx='115' cy='30' r='1.1' opacity='0.85'/%3E%3Ccircle cx='175' cy='34' r='1.3' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%23a154ff' opacity='0.6'%3E%3Ccircle cx='40' cy='22' r='1.6'/%3E%3Ccircle cx='125' cy='18' r='2'/%3E%3C/g%3E%3C/svg%3E");
+            background-size: auto, auto, 200px 50px;
+        }
+
+        .team-title-text {
+            font-family: 'Cinzel', serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 2px;
+            z-index: 2;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+            width: 100%;
+        }
+
+        .team-header-left .team-title-text { padding-left: 20px; padding-right: 90px; text-align: left; }
+        .team-header-right .team-title-text { padding-right: 20px; padding-left: 90px; text-align: right; }
+
+        /* Gold badge for team score */
+        .gold-score-badge {
+            position: absolute;
+            top: 0;
+            width: 85px;
+            height: 68px;
+            background: linear-gradient(135deg, #ffe066 0%, #f5af19 40%, #e65c00 70%, #9e3f00 100%);
+            box-shadow: 0 0 16px rgba(245, 175, 25, 0.6);
+            border-bottom: #a74b0e 2px solid;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            cursor: pointer;
+            transition: transform 0.15 ease;
+        }
+
+        .gold-score-badge:active {
+            transform: scale(0.95);
+        }
+
+        .team-header-left .gold-score-badge {
+            right: -10px;
+            transform: skewX(-25deg);
+            margin-right: -10px;
+        }
+
+        .team-header-right .gold-score-badge {
+            left: -10px;
+            transform: skewX(25deg);
+            margin-left: -10px;
+            background: linear-gradient(-135deg, #ffe066 0%, #f5af19 40%, #e65c00 70%, #9e3f00 100%);
+        }
+
+        .score-value {
+            font-family: 'Cinzel', serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+        }
+
+        .team-header-left .score-value { transform: skewX(25deg); }
+        .team-header-right .score-value { transform: skewX(-25deg); }
+
+        .roster-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .player-card {
+            width: 100%;
+            height: 60px;
+            background: linear-gradient(135deg, #0d041c 0%, #1a0b36 100%);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 18px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8), inset 0 0 12px rgba(161, 84, 255, 0.25);
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .team-panel-left .player-card {
+            border-left: 4px solid #a154ff;
+            border-bottom: 2px solid rgba(161, 84, 255, 0.6);
+            border-right: 1px solid rgba(161, 84, 255, 0.3);
+        }
+
+        .team-panel-right .player-card {
+            flex-direction: row-reverse;
+            border-right: 4px solid #a154ff;
+            border-bottom: 2px solid rgba(161, 84, 255, 0.6);
+            border-left: 1px solid rgba(161, 84, 255, 0.3);
+        }
+
+        .player-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .team-panel-right .player-info {
+            align-items: flex-end;
+        }
+
+        .player-role-tag {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: #a154ff;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        .player-name {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1px;
+            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+        }
+
+        .player-lives-container {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .team-panel-left .player-lives-container { align-items: flex-end; }
+        .team-panel-right .player-lives-container { align-items: flex-start; }
+
+        .lives-label {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.58rem;
+            font-weight: 800;
+            color: #ffd700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .player-lives {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .heart {
+            font-size: 1.25rem;
+            filter: grayscale(100%) opacity(0.25);
+            transition: all 0.25s ease;
+            cursor: pointer;
+        }
+
+        .heart:hover {
+            transform: scale(1.2);
+        }
+
+        .heart.active {
+            filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.9)) grayscale(0%);
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .bottom-decor-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .decor-line {
+            width: 320px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(161, 84, 255, 0.8), transparent);
+        }
+
+        .decor-badge {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 3px;
+            background: rgba(13, 4, 28, 0.9);
+            padding: 6px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(161, 84, 255, 0.5);
+            box-shadow: 0 0 15px rgba(161, 84, 255, 0.3);
+            text-transform: uppercase;
+        }
+
+        .toggle-bg-btn {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            background: rgba(13, 4, 28, 0.9);
+            color: #ffd700;
+            border: 1px solid #f5af19;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-bg-btn:hover {
+            background: #a154ff;
+            color: #ffffff;
+            border-color: #ffffff;
+            box-shadow: 0 0 15px rgba(161, 84, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stage-background" id="stageBg">
+        <div class="nebula-glow"></div>
+        <div class="stars-layer-1"></div>
+        <div class="stars-layer-2"></div>
+    </div>
+
+    <!-- Pulsing aura under game window -->
+    <div class="game-backlight" id="gameBacklight"></div>
+
+    <div class="stage-canvas">
+
+        <div class="top-header-bar">
+            <div class="center-block">
+                <div class="center-content">LE SANCTUAIRE</div>
+            </div>
+            <!-- <div class="match-status-tag">TEAM BATTLE • ROUND 1</div>-->
+        </div>
+
+        <div class="game-display-container">
+            <div class="corner-accent corner-top-left"></div>
+            <div class="corner-accent corner-top-right"></div>
+            <div class="corner-accent corner-bottom-left"></div>
+            <div class="corner-accent corner-bottom-right"></div>
+
+            <div class="game-frame-border">
+                <div class="game-cutout-placeholder">
+                    <div class="game-cutout-label">🎮 ÉCRAN DU JEU (16:9)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-panel team-panel-left">
+            <div class="team-header-bar team-header-left">
+                <div class="team-title-text"></div>
+                <div class="gold-score-badge" title="Cliquer pour changer le score" onclick="cycleScore(this)">
+                    <span class="score-value"></span>
+                </div>
+            </div>
+
+            <!-- Team 1 Player Roster -->
+            <div class="roster-list">
+
+            </div>
+        </div>
+
+        <div class="team-panel team-panel-right">
+            <div class="team-header-bar team-header-right">
+                <div class="team-title-text"></div>
+                <div class="gold-score-badge" title="Cliquer pour changer le score" onclick="cycleScore(this)">
+                    <span class="score-value"></span>
+                </div>
+            </div>
+
+            <!-- Team 2 Player Roster -->
+            <div class="roster-list">
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle individual player life hearts on click
+        function toggleHeart(element) {
+            element.classList.toggle('active');
+        }
+
+        // Cycle through team scores on badge click
+        function cycleScore(badgeElement) {
+            const scoreSpan = badgeElement.querySelector('.score-value');
+            let currentScore = parseInt(scoreSpan.textContent, 10) || 0;
+            currentScore = (currentScore + 1) % 10;
+            scoreSpan.textContent = currentScore;
+        }
+    </script>
+    <script>
+    // Rendu dynamique des cœurs de vie
+    function renderHearts(container, currentLives, maxLives) {
+        container.innerHTML = '';
+        for (let i = 0; i < maxLives; i++) {
+            const heartSpan = document.createElement('span');
+            heartSpan.className = i < currentLives ? 'heart active' : 'heart';
+            heartSpan.textContent = '❤️';
+            container.appendChild(heartSpan);
+        }
+    }
+
+    // Génération dynamique des cartes de joueurs pour une liste
+    function renderRoster(container, playersList, maxLives) {
+        container.innerHTML = '';
+
+        playersList.forEach(player => {
+            const playerCard = document.createElement('div');
+            playerCard.className = 'player-card';
+
+            const playerInfo = document.createElement('div');
+            playerInfo.className = 'player-info';
+
+            const roleTag = document.createElement('span');
+            roleTag.className = 'player-role-tag';
+            roleTag.textContent = 'JOUEUR';
+
+            const playerName = document.createElement('span');
+            playerName.className = 'player-name';
+            playerName.textContent = player.name;
+
+            playerInfo.appendChild(roleTag);
+            playerInfo.appendChild(playerName);
+
+            const livesContainer = document.createElement('div');
+            livesContainer.className = 'player-lives-container';
+
+            const livesLabel = document.createElement('span');
+            livesLabel.className = 'lives-label';
+            livesLabel.textContent = 'VIES';
+
+            const livesDiv = document.createElement('div');
+            livesDiv.className = 'player-lives';
+            renderHearts(livesDiv, player.lives, maxLives);
+
+            livesContainer.appendChild(livesLabel);
+            livesContainer.appendChild(livesDiv);
+
+            playerCard.appendChild(playerInfo);
+            playerCard.appendChild(livesContainer);
+
+            container.appendChild(playerCard);
+        });
+    }
+
+    function connectWebSocket() {
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+        
+        // Détection automatique du protocole et de l'hôte
+        const wsProtocol = isLocal ? 'ws:' : 'wss:';
+        const wsHost = isLocal ? 'localhost:8080' : window.location.host;
+
+        const socket = new WebSocket(`${wsProtocol}//${wsHost}`);
+
+        socket.onopen = () => {
+            console.log('✅ Connecté au serveur WebSocket centralisé !');
+        };
+        
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (!data || !data.active) return;
+
+            // --- ÉQUIPE 1 (GAUCHE) ---
+            if (data.team1) {
+                const team1Title = document.querySelector('.team-panel-left .team-title-text');
+                const team1Score = document.querySelector('.team-panel-left .score-value');
+                const team1Roster = document.querySelector('.team-panel-left .roster-list');
+
+                if (team1Title) team1Title.textContent = data.team1.name || "ÉQUIPE 1";
+                if (team1Score) team1Score.textContent = data.team1.score ?? 0;
+                if (team1Roster) renderRoster(team1Roster, data.team1.players, data.maxLives);
+            }
+
+            // --- ÉQUIPE 2 (DROITE) ---
+            if (data.team2) {
+                const team2Title = document.querySelector('.team-panel-right .team-title-text');
+                const team2Score = document.querySelector('.team-panel-right .score-value');
+                const team2Roster = document.querySelector('.team-panel-right .roster-list');
+
+                if (team2Title) team2Title.textContent = data.team2.name || "ÉQUIPE 2";
+                if (team2Score) team2Score.textContent = data.team2.score ?? 0;
+                if (team2Roster) renderRoster(team2Roster, data.team2.players, data.maxLives);
+            }
+        };
+
+        socket.onclose = () => {
+            setTimeout(connectWebSocket, 3000);
+        };
+    }
+    connectWebSocket();
+</script>
+</body>
+</html>
