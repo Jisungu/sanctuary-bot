@@ -87,7 +87,7 @@ async function broadcastOverlayData() {
         if (hasMatch) {
             isPhoenixMatch = battle.currentMatch?.isPhoenix;
         } else {
-            isPhoenixMatch = lastHistory.isPhoenix;
+            isPhoenixMatch = lastHistory?.isPhoenix || false;
         }
 
         const overlayData = JSON.stringify({
