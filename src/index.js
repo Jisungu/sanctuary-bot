@@ -20,11 +20,15 @@ const app = express();
 app.disable('x-powered-by');
 
 // Déclare le dossier 'public' pour rendre score.html accessible
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Route racine : renvoie directement le fichier d'overlay
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'score.html'));
+app.get('/score.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
+});
+
+app.get('/recap.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'recap.html'));
 });
 
 // Route de check de santé pour Render
