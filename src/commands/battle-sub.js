@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
+const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -66,6 +67,7 @@ module.exports = {
             battle.markModified('teams');
             battle.markModified('viesActuelles');
             await battle.save();
+            await broadcastOverlayData();
 
             const subEmbed = new EmbedBuilder()
                 .setTitle('🔄 Remplacement de Chevalier')

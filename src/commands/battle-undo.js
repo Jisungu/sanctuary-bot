@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
 const { characters, stages } = require('../utils/data');
+const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -75,6 +76,7 @@ module.exports = {
             battle.markModified('viesActuelles');
             battle.markModified('history');
             await battle.save();
+            await broadcastOverlayData();
 
             await interaction.editReply({ embeds: [undoEmbed] });
 

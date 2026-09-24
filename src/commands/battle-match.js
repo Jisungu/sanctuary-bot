@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
 const { characters, stages } = require('../utils/data');
+const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -50,9 +51,11 @@ module.exports = {
                 p2: p2.id,
                 char1: char1Value,
                 char2: char2Value,
-                stage: stageValue
+                stage: stageValue,
+                isPhoenix: false
             };
             await battle.save();
+            await broadcastOverlayData();
             
             const char1Label = characters.find(c => c.value === char1Value)?.label || char1Value;
             const char2Label = characters.find(c => c.value === char2Value)?.label || char2Value;

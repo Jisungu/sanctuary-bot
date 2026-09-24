@@ -7,11 +7,24 @@ const Battle = require('./models/Battle');
 const { characters, stages } = require('./utils/data'); 
 const express = require('express');
 const Player = require('./models/Player');
+const { initWebSocket, broadcastOverlayData } = require('./utils/overlayServer');
+const http = require('http');
+const mongoose = require('mongoose');
+
+// Connexion MongoDB (prend MONGODB_URI dans le .env en local ou sur Render)
+mongoose.connect(process.env.MONGODB_URI);
 
 const app = express();
 app.disable('x-powered-by');
-app.get('/', (req, res) => res.send('Le Sanctuaire est en ligne !'));
-app.listen(process.env.PORT || 3000);
+const server = http.createServer(app);
+
+// Initialisation du serveur WebSocket attaché au serveur HTTP principal
+initWebSocket(server);
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`🚀 Serveur HTTP & WebSocket démarré sur le port ${PORT}`);
+});
 
 const client = new Client({
     intents: [
@@ -88,7 +101,7 @@ client.on('interactionCreate', async interaction => {
 
                 if (!activeBattle) return interaction.deferUpdate();
 
-                // 🚨 SÉCURITÉ : Bloquer la présence si le joueur n'est pas inscrit
+                // Bloquer la présence si le joueur n'est pas inscrit
                 if (customId === 'confirm_presence' && !activeBattle.participants.includes(user.id)) {
                     return interaction.reply({ 
                         content: "❌ **Accès refusé !** Tu ne peux pas confirmer ta présence car tu ne t'es pas inscrit lors du sondage initial.", 
@@ -137,7 +150,7 @@ client.on('interactionCreate', async interaction => {
             } catch (err) { console.error("Erreur bouton Sanctuaire:", err); }
         }
         
-        // 2. Gestion des victoires avec restriction Admin/Joueurs concernés
+        // Gestion des victoires avec restriction Admin/Joueurs concernés
         if (customId.startsWith('win_')) {
             try {
                 const battle = await Battle.findOne({ guildId, status: 'started' }).sort({ createdAt: -1 });
@@ -160,6 +173,8 @@ client.on('interactionCreate', async interaction => {
                 const loserId = isP1Winner ? battle.currentMatch.p2 : battle.currentMatch.p1;
                 
                 battle.history.push({ 
+                    p1_id: battle.currentMatch.p1,
+                    p2_id: battle.currentMatch.p2,
                     winnerId, 
                     loserId, 
                     winnerChar: isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2, 
@@ -230,6 +245,7 @@ client.on('interactionCreate', async interaction => {
                     }).join('\n');
 
                     await battle.save();
+                    await broadcastOverlayData();
                     await interaction.deleteReply();
 
                     const victoryEmbed = new EmbedBuilder()
@@ -255,6 +271,7 @@ client.on('interactionCreate', async interaction => {
                 }
                 
                 await battle.save();
+                await broadcastOverlayData();
                 await interaction.deleteReply();
                 await sendBattleStatus(interaction);
 
@@ -292,11 +309,11 @@ client.on('interactionCreate', async interaction => {
                         await interaction.channel.send({ embeds: [autoPhoenixEmbed] });
                     }
                 }
-                // --- MISE À JOUR DES STATISTIQUES DES JOUEURS ---
+
+                // Statistiques des joueurs
                 const winChar = isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2;
                 const losChar = isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1;
 
-                // Mise à jour du vainqueur
                 await Player.findByIdAndUpdate(winnerId, {
                     $inc: { 
                         'stats.wins': 1,
@@ -304,13 +321,13 @@ client.on('interactionCreate', async interaction => {
                     }
                 }, { upsert: true });
 
-                // Mise à jour du vaincu
                 await Player.findByIdAndUpdate(loserId, {
                     $inc: { 
                         'stats.losses': 1,
                         [`stats.charactersPlayed.${losChar}`]: 1
                     }
                 }, { upsert: true });
+
             } catch (err) { console.error("Erreur victoire:", err); }
         }
 
@@ -356,7 +373,12 @@ client.on('interactionCreate', async interaction => {
                 const winnerChar = isWinnerP1 ? char1Value : char2Value;
                 const loserChar = isWinnerP1 ? char2Value : char1Value;
 
+                const p1_id = isWinnerP1 ? winnerId : loserId;
+                const p2_id = isWinnerP1 ? loserId : winnerId;
+
                 battle.history.push({ 
+                    p1_id: p1_id,
+                    p2_id: p2_id,
                     winnerId, 
                     loserId, 
                     winnerChar: winnerChar,
@@ -368,7 +390,9 @@ client.on('interactionCreate', async interaction => {
 
                 battle.viesActuelles.set(winnerId, 1);
                 battle.markModified('viesActuelles');
+                battle.currentMatch = undefined;
                 await battle.save();
+                await broadcastOverlayData();
 
                 const updatedEmbed = EmbedBuilder.from(originalEmbed)
                     .setTitle('🔥 LE PHOENIX RENAÎT DE SES CENDRES ! 🔥')

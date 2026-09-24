@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
 const { characters, stages } = require('../utils/data'); 
+const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -36,6 +37,19 @@ module.exports = {
             if (p1Lives > 0 || p2Lives > 0) {
                 return interaction.reply({ content: "❌ Le duel du Phoenix ne peut opposer que des Chevaliers éliminés (0 vie).", ephemeral: true });
             }
+
+            // --- MISE À JOUR DU CURRENTMATCH ET ENREGISTREMENT ---
+            battle.currentMatch = {
+                p1: p1.id,
+                char1: char1,
+                p2: p2.id,
+                char2: char2,
+                stage: stage,
+                isPhoenix: true
+            };
+
+            await battle.save();
+            await broadcastOverlayData();
 
             const char1Label = characters.find(c => c.value === char1)?.label || char1;
             const char2Label = characters.find(c => c.value === char2)?.label || char2;

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Battle = require('../models/Battle');
+const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -22,6 +23,7 @@ module.exports = {
 
         battle.status = 'calling';
         await battle.save();
+        await broadcastOverlayData();
 
         const embedAppel = new EmbedBuilder()
             .setTitle('📢 L\'Appel d\'Athéna')
@@ -51,5 +53,6 @@ module.exports = {
 
         battle.messageId = response.id;
         await battle.save();
+        await broadcastOverlayData();
     },
 };

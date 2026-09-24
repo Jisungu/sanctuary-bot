@@ -1,6 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const Player = require('../models/Player');
 const Battle = require('../models/Battle');
+const { broadcastOverlayData } = require('../utils/overlayServer');
+
 require('dotenv').config();
 
 module.exports = {
@@ -81,6 +83,7 @@ module.exports = {
             };
             battle.markModified('viesActuelles');
             await battle.save();
+            await broadcastOverlayData();
 
             const runEmbed = new EmbedBuilder()
                 .setTitle('🏛️ Les Camps de la Guerre Sainte sont scellés')

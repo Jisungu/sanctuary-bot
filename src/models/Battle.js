@@ -35,7 +35,8 @@ const battleSchema = new mongoose.Schema({
         p2: String,
         char1: String, 
         char2: String, 
-        stage: String 
+        stage: String ,
+        isPhoenix: { type: Boolean, default: false },
     },
 
     viesParJoueur: Number,
@@ -46,6 +47,8 @@ const battleSchema = new mongoose.Schema({
     },
 
     history: [{
+        p1_id: String,
+        p2_id: String,
         winnerId: String,
         loserId: String,
         winnerChar: String,
