@@ -3,6 +3,7 @@ const Battle = require('../models/Battle');
 const Player = require('../models/Player');
 
 let wss = null;
+let isSwapped = false; // Variable globale pour garder l'état du swap en mémoire
 
 function initWebSocket(server) {
     wss = new WebSocketServer({ server });
@@ -11,6 +12,13 @@ function initWebSocket(server) {
     wss.on('connection', () => {
         broadcastOverlayData();
     });
+}
+
+// Fonction pour inverser le côté de l'overlay sans toucher à la BDD
+function toggleSwapSides() {
+    isSwapped = !isSwapped;
+    broadcastOverlayData();
+    return isSwapped;
 }
 
 async function broadcastOverlayData() {
@@ -27,6 +35,7 @@ async function broadcastOverlayData() {
         }
 
         async function formatTeam(team) {
+            if (!team) return { name: "ÉQUIPE", score: 0, players: [] };
             let totalScore = 0;
             const playersList = [];
 
@@ -50,11 +59,11 @@ async function broadcastOverlayData() {
             };
         }
 
-        const team1Data = await formatTeam(battle.teams.team1);
-        const team2Data = await formatTeam(battle.teams.team2);
+        const rawTeam1 = await formatTeam(battle.teams?.team1);
+        const rawTeam2 = await formatTeam(battle.teams?.team2);
 
-        let p1Data = null;
-        let p2Data = null;
+        let rawP1Data = null;
+        let rawP2Data = null;
 
         const hasMatch = battle.currentMatch && (battle.currentMatch.p1 || battle.currentMatch.p2);
         const lastHistory = battle.history?.length > 0 ? battle.history[battle.history.length - 1] : null;
@@ -67,14 +76,14 @@ async function broadcastOverlayData() {
             const p2Player = await Player.findById(p2Id);
 
             if (p1Player && p2Player) {
-                p1Data = {
+                rawP1Data = {
                     id: p1Player.id,
                     name: p1Player.username,
                     lives: battle.viesActuelles.get(p1Player.id.toString()) ?? 0,
                     char: battle.currentMatch?.char1 || null
                 };
 
-                p2Data = {
+                rawP2Data = {
                     id: p2Player.id,
                     name: p2Player.username,
                     lives: battle.viesActuelles.get(p2Player.id.toString()) ?? 0,
@@ -83,26 +92,22 @@ async function broadcastOverlayData() {
             }
         }
         
-        let isPhoenixMatch = false;
-        if (hasMatch) {
-            isPhoenixMatch = battle.currentMatch?.isPhoenix;
-        } else {
-            isPhoenixMatch = lastHistory?.isPhoenix || false;
-        }
+        let isPhoenixMatch = hasMatch ? battle.currentMatch?.isPhoenix : (lastHistory?.isPhoenix || false);
 
+        // Application de l'inversion à l'envoi uniquement (BDD intacte)
         const overlayData = JSON.stringify({
             active: true,
             maxLives: battle.viesParJoueur,
-            team1: team1Data,
-            team2: team2Data,
-            p1: p1Data,
-            p2: p2Data,
+            team1: isSwapped ? rawTeam2 : rawTeam1,
+            team2: isSwapped ? rawTeam1 : rawTeam2,
+            p1: isSwapped ? rawP2Data : rawP1Data,
+            p2: isSwapped ? rawP1Data : rawP2Data,
             stage: battle.currentMatch?.stage || null,
             isPhoenix: isPhoenixMatch
         });
 
         wss.clients.forEach(client => {
-            if (client.readyState === 1) {
+            if (client.readyState === 1) { // WebSocket.OPEN
                 client.send(overlayData);
             }
         });
@@ -111,4 +116,4 @@ async function broadcastOverlayData() {
     }
 }
 
-module.exports = { initWebSocket, broadcastOverlayData };
+module.exports = { initWebSocket, broadcastOverlayData, toggleSwapSides };
