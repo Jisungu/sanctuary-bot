@@ -19,16 +19,19 @@ mongoose.connect(process.env.MONGODB_URI);
 const app = express();
 app.disable('x-powered-by');
 
-// Déclare le dossier 'public' pour rendre score.html accessible
+// Déclare le dossier 'public' pour rendre les overlays accessibles
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// Route racine : renvoie directement le fichier d'overlay
 app.get('/score.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
 });
 
 app.get('/recap.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'recap.html'));
+});
+
+app.get('/rules.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'rules.html'));
 });
 
 // Route de check de santé pour Render
@@ -63,6 +66,8 @@ for (const file of commandFiles) {
 }
 
 connectDB();
+
+// --- FONCTIONS UTILITAIRES ---
 
 async function sendBattleStatus(interaction) {
     const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
@@ -100,6 +105,18 @@ async function sendBattleStatus(interaction) {
     await interaction.channel.send({ embeds: [embed] });
 }
 
+async function getOrCreateTBRole(guild) {
+    let role = guild.roles.cache.find(r => r.name === 'TeamBattle');
+    if (!role) {
+        role = await guild.roles.create({
+            name: 'TeamBattle',
+            color: '#e67e22',
+            reason: 'Rôle automatique pour les participants de la Team Battle'
+        });
+    }
+    return role;
+}
+
 // 4. GESTION DES INTERACTIONS (Slash Commands, Autocomplete, Boutons)
 client.on('interactionCreate', async interaction => {
     if (interaction.isAutocomplete()) {
@@ -134,11 +151,31 @@ client.on('interactionCreate', async interaction => {
                 await interaction.deferUpdate();
 
                 let updateQuery = {};
+                const tbRole = await getOrCreateTBRole(interaction.guild);
 
+                // --- GESTION DES INSCRIPTIONS ET DU RÔLE ---
                 if (customId === 'join_battle') {
                     updateQuery = { $addToSet: { participants: user.id } };
+                    
+                    try {
+                        if (!interaction.member.roles.cache.has(tbRole.id)) {
+                            await interaction.member.roles.add(tbRole);
+                        }
+                    } catch (roleErr) {
+                        console.error("Erreur lors de l'ajout du rôle TeamBattle :", roleErr);
+                    }
+
                 } else if (customId === 'leave_battle') {
                     updateQuery = { $pull: { participants: user.id, presents: user.id } };
+
+                    try {
+                        if (interaction.member.roles.cache.has(tbRole.id)) {
+                            await interaction.member.roles.remove(tbRole);
+                        }
+                    } catch (roleErr) {
+                        console.error("Erreur lors du retrait du rôle TeamBattle :", roleErr);
+                    }
+
                 } else if (customId === 'confirm_presence') {
                     updateQuery = { $addToSet: { presents: user.id } };
                 } else if (customId === 'force_presence') {
@@ -171,7 +208,7 @@ client.on('interactionCreate', async interaction => {
                 
             } catch (err) { console.error("Erreur bouton Sanctuaire:", err); }
         }
-        
+                
         // Gestion des victoires
         if (customId.startsWith('win_')) {
             try {
@@ -269,6 +306,41 @@ client.on('interactionCreate', async interaction => {
                     await battle.save();
                     await broadcastOverlayData();
                     await interaction.deleteReply();
+
+                    // --- NETTOYAGE DES RÔLES ET DES VOCAUX ---
+                    try {
+                        const guild = interaction.guild;
+                        const roleTB = guild.roles.cache.find(r => r.name === 'TeamBattle');
+                        const roleT1 = guild.roles.cache.find(r => r.name.toLowerCase() === battle.teams.team1.name.toLowerCase());
+                        const roleT2 = guild.roles.cache.find(r => r.name.toLowerCase() === battle.teams.team2.name.toLowerCase());
+
+                        const allParticipantIds = [
+                            ...battle.teams.team1.players,
+                            ...battle.teams.team2.players
+                        ];
+
+                        // Retrait des rôles (TeamBattle, T1, T2) à tous les participants
+                        for (const playerId of allParticipantIds) {
+                            const member = await guild.members.fetch(playerId).catch(() => null);
+                            if (member) {
+                                const rolesToRemove = [];
+                                if (roleTB && member.roles.cache.has(roleTB.id)) rolesToRemove.push(roleTB);
+                                if (roleT1 && member.roles.cache.has(roleT1.id)) rolesToRemove.push(roleT1);
+                                if (roleT2 && member.roles.cache.has(roleT2.id)) rolesToRemove.push(roleT2);
+
+                                if (rolesToRemove.length > 0) {
+                                    await member.roles.remove(rolesToRemove).catch(e => console.error(`Erreur retrait rôles (${playerId}):`, e));
+                                }
+                            }
+                        }
+
+                        // Suppression des rôles temporaires d'équipes
+                        if (roleT1) await roleT1.delete().catch(() => null);
+                        if (roleT2) await roleT2.delete().catch(() => null);
+
+                    } catch (cleanError) {
+                        console.error("Erreur lors du nettoyage de fin de battle :", cleanError);
+                    }
 
                     const victoryEmbed = new EmbedBuilder()
                         .setTitle('🏆 LE SANCTUAIRE A SES VAINQUEURS !')

@@ -5,6 +5,21 @@ const { broadcastOverlayData } = require('../utils/overlayServer');
 
 require('dotenv').config();
 
+// Utilitaire sécurisé pour récupérer ou créer un rôle
+async function getOrCreateTeamRole(guild, teamName, color) {
+    const roles = await guild.roles.fetch();
+    let role = roles.find(r => r.name.toLowerCase() === teamName.toLowerCase());
+    
+    if (!role) {
+        role = await guild.roles.create({
+            name: teamName,
+            color: color,
+            reason: 'Rôle d\'équipe automatique pour la Team Battle'
+        });
+    }
+    return role;
+}
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('battle-run')
@@ -44,6 +59,7 @@ module.exports = {
                 });
             }
 
+            // Répartition des équipes
             const sortedPlayers = registeredPlayers.sort((a, b) => b.level - a.level);
             const team1 = []; const team2 = [];
             let p1Lvl = 0; let p2Lvl = 0;
@@ -53,27 +69,96 @@ module.exports = {
                 else { team2.push(p); p2Lvl += p.level; }
             }
 
+            // 1. CRÉATION DES RÔLES D'ÉQUIPE
+            const roleTeam1 = await getOrCreateTeamRole(interaction.guild, team1Name, '#3498db');
+            const roleTeam2 = await getOrCreateTeamRole(interaction.guild, team2Name, '#e74c3c');
+
+            // 2. ASSIGNATION DES RÔLES AUX JOUEURS
+            for (const p of team1) {
+                const member = await interaction.guild.members.fetch(p._id).catch(() => null);
+                if (member && roleTeam1) await member.roles.add(roleTeam1.id).catch(err => console.error(`Erreur rôle T1 (${p._id}):`, err));
+            }
+            for (const p of team2) {
+                const member = await interaction.guild.members.fetch(p._id).catch(() => null);
+                if (member && roleTeam2) await member.roles.add(roleTeam2.id).catch(err => console.error(`Erreur rôle T2 (${p._id}):`, err));
+            }
+
+            // 3. CONSTRUCTION DYNAMIQUE DES PERMISSIONS
+            const basePermissionOverwrites = [
+                {
+                    id: interaction.guild.roles.everyone,
+                    allow: [PermissionFlagsBits.ViewChannel],
+                    deny: [PermissionFlagsBits.Connect]
+                }
+            ];
+
+            // Owner du serveur
+            const ownerMember = await interaction.guild.members.fetch(interaction.guild.ownerId).catch(() => null);
+            if (ownerMember) {
+                basePermissionOverwrites.push({
+                    id: ownerMember.user,
+                    allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                });
+            }
+
+            // Rôles Staff
+            const staffRoleNames = ['Admin', 'TO', 'Sanctuaire'];
+            const allRoles = await interaction.guild.roles.fetch();
+
+            staffRoleNames.forEach(roleName => {
+                const foundRole = allRoles.find(r => r.name.toLowerCase() === roleName.toLowerCase());
+                if (foundRole) {
+                    basePermissionOverwrites.push({
+                        id: foundRole,
+                        allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.MuteMembers]
+                    });
+                }
+            });
+
+            // 4. CRÉATION DES SALONS VOCAUX PRIVÉS
             let voice1Id = null;
             let voice2Id = null;
 
             const category = await interaction.guild.channels.fetch(categoryId).catch(() => null);
-            if (category) {
+
+            if (category && roleTeam1 && roleTeam2) {
                 try {
+                    // Salon Vocal Équipe 1
                     const chan1 = await interaction.guild.channels.create({
                         name: `🛡️ ${team1Name.toUpperCase()}`,
                         type: ChannelType.GuildVoice,
                         parent: category.id,
+                        permissionOverwrites: [
+                            ...basePermissionOverwrites,
+                            {
+                                id: roleTeam1, // Passe directement l'objet Role complet
+                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                            }
+                        ]
                     });
+
+                    // Salon Vocal Équipe 2
                     const chan2 = await interaction.guild.channels.create({
                         name: `🔱 ${team2Name.toUpperCase()}`,
                         type: ChannelType.GuildVoice,
                         parent: category.id,
+                        permissionOverwrites: [
+                            ...basePermissionOverwrites,
+                            {
+                                id: roleTeam2, // Passe directement l'objet Role complet
+                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                            }
+                        ]
                     });
+
                     voice1Id = chan1.id;
                     voice2Id = chan2.id;
-                } catch (e) { console.error("Erreur création salons :", e); }
+                } catch (e) { 
+                    console.error("Erreur création salons vocaux :", e); 
+                }
             }
 
+            // 5. SAUVEGARDE DE LA BATTLE & OVERLAY
             battle.status = 'started';
             battle.viesParJoueur = viesInitiales;
             battle.presents.forEach(id => battle.viesActuelles.set(id.toString(), viesInitiales));
@@ -88,7 +173,7 @@ module.exports = {
             const runEmbed = new EmbedBuilder()
                 .setTitle('🏛️ Les Camps de la Guerre Sainte sont scellés')
                 .setDescription(
-                    `Le destin a parlé. Les salons vocaux ont été érigés dans le Sanctuaire.\n\n` +
+                    `Le destin a parlé. Les rôles et salons vocaux sécurisés ont été érigés dans le Sanctuaire.\n\n` +
                     `📜 **Chroniques du Sanctuaire**\n` +
                     `Chaque guerrier dispose de **${viesInitiales} éclats de Cosmos** (vies).`
                 )
