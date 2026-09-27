@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { toggleSwapSides } = require('../utils/overlayServer');
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('battle-swap')
@@ -16,7 +17,7 @@ module.exports = {
 
         return interaction.reply({ 
             content: `🔄 L'affichage HUD a été mis à jour : **${stateMessage}**.`,
-            ephemeral: true 
+            ephemeral: true // Message éphémère (visible uniquement par l'émetteur)
         });
     }
 };

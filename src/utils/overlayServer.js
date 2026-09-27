@@ -94,16 +94,73 @@ async function broadcastOverlayData() {
         
         let isPhoenixMatch = hasMatch ? battle.currentMatch?.isPhoenix : (lastHistory?.isPhoenix || false);
 
-        // Application de l'inversion à l'envoi uniquement (BDD intacte)
+        // --- CALCULS DE FIN DE BATAILLE (VICTOIRE & MVP) ---
+        let winningTeamData = null;
+        let mvpData = null;
+
+        // Dans src/utils/overlayServer.js, lors du calcul de fin de bataille :
+        if (battle.status === 'finished' && battle.teams?.team1 && battle.teams?.team2) {
+            const t1Lives = rawTeam1.score;
+            const isT1Winner = t1Lives > 0;
+            const winTeam = isT1Winner ? battle.teams.team1 : battle.teams.team2;
+
+            winningTeamData = { 
+                name: winTeam.name,
+                teamIndex: isT1Winner ? 1 : 2
+             };
+
+            const stats = {};
+            const playerLastChar = {};
+
+            battle.history.forEach(d => {
+                if (d.winnerId) {
+                    const wId = d.winnerId.toString();
+                    stats[wId] = (stats[wId] || 0) + 1;
+                    if (d.winnerChar) playerLastChar[wId] = d.winnerChar;
+                }
+                if (d.loserId && d.loserChar) {
+                    playerLastChar[d.loserId.toString()] = d.loserChar;
+                }
+            });
+
+            if (winTeam.players.length > 0) {
+                const mvpId = winTeam.players.reduce((a, b) => (stats[a] || 0) > (stats[b] || 0) ? a : b, winTeam.players[0]);
+                const mvpPlayer = await Player.findById(mvpId);
+
+                mvpData = {
+                    id: mvpId,
+                    name: mvpPlayer ? mvpPlayer.username : "Guerrier",
+                    kos: stats[mvpId] || 0,
+                    char: playerLastChar[mvpId] || "lars"
+                };
+
+                // Liste des coéquipiers (hors MVP)
+                const teammates = [];
+                for (const pId of winTeam.players) {
+                    if (pId.toString() !== mvpId.toString()) {
+                        const pDoc = await Player.findById(pId);
+                        teammates.push({
+                            name: pDoc ? pDoc.username : "Joueur",
+                            char: playerLastChar[pId.toString()] || "jin"
+                        });
+                    }
+                }
+                winningTeamData.teammates = teammates;
+            }
+        }
+
         const overlayData = JSON.stringify({
             active: true,
+            status: battle.status,
             maxLives: battle.viesParJoueur,
             team1: isSwapped ? rawTeam2 : rawTeam1,
             team2: isSwapped ? rawTeam1 : rawTeam2,
             p1: isSwapped ? rawP2Data : rawP1Data,
             p2: isSwapped ? rawP1Data : rawP2Data,
             stage: battle.currentMatch?.stage || null,
-            isPhoenix: isPhoenixMatch
+            isPhoenix: isPhoenixMatch,
+            winningTeam: winningTeamData,
+            mvp: mvpData
         });
 
         wss.clients.forEach(client => {
