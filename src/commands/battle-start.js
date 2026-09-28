@@ -83,7 +83,7 @@ module.exports = {
                 if (member && roleTeam2) await member.roles.add(roleTeam2.id).catch(err => console.error(`Erreur rôle T2 (${p._id}):`, err));
             }
 
-            // 3. CONSTRUCTION DYNAMIQUE DES PERMISSIONS
+            // 3. CONSTRUCTION DYNAMIQUE DES PERMISSIONS DE BASE
             const basePermissionOverwrites = [
                 {
                     id: interaction.guild.roles.everyone,
@@ -115,7 +115,26 @@ module.exports = {
                 }
             });
 
-            // 4. CRÉATION DES SALONS VOCAUX PRIVÉS
+            // 4. LISTE COMPLÈTE DES PERMISSIONS VOCALES, STREAM ET TEXTUELLES POUR L'ÉQUIPE
+            const teamPermissions = [
+                // Permissions Vocales & Vidéo
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.Connect,
+                PermissionFlagsBits.Speak,
+                PermissionFlagsBits.Stream,                 // <-- Autorise le partage d'écran / Stream
+                PermissionFlagsBits.UseVAD,                 // Détection de voix
+                PermissionFlagsBits.UseEmbeddedActivities,  // Activités / Jeux dans le vocal
+
+                // Permissions Textuelles (Chat du salon vocal)
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.EmbedLinks,
+                PermissionFlagsBits.AttachFiles,
+                PermissionFlagsBits.UseExternalEmojis,
+                PermissionFlagsBits.AddReactions
+            ];
+
+            // 5. CRÉATION DES SALONS VOCAUX PRIVÉS
             let voice1Id = null;
             let voice2Id = null;
 
@@ -131,8 +150,8 @@ module.exports = {
                         permissionOverwrites: [
                             ...basePermissionOverwrites,
                             {
-                                id: roleTeam1, // Passe directement l'objet Role complet
-                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                                id: roleTeam1.id,
+                                allow: teamPermissions
                             }
                         ]
                     });
@@ -145,8 +164,8 @@ module.exports = {
                         permissionOverwrites: [
                             ...basePermissionOverwrites,
                             {
-                                id: roleTeam2, // Passe directement l'objet Role complet
-                                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
+                                id: roleTeam2.id,
+                                allow: teamPermissions
                             }
                         ]
                     });
@@ -158,7 +177,7 @@ module.exports = {
                 }
             }
 
-            // 5. SAUVEGARDE DE LA BATTLE & OVERLAY
+            // 6. SAUVEGARDE DE LA BATTLE & OVERLAY
             battle.status = 'started';
             battle.viesParJoueur = viesInitiales;
             battle.presents.forEach(id => battle.viesActuelles.set(id.toString(), viesInitiales));
