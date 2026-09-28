@@ -4,7 +4,7 @@ const Player = require('../models/Player');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('battle-recount')
+        .setName('battle-refresh-stats')
         .setDescription('Recalcule et rafraîchit l\'intégralité des statistiques des joueurs.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

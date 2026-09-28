@@ -85,7 +85,7 @@ async function sendBattleStatus(interaction) {
         const stageLabel = stages.find(s => s.value === lastDuel.stage)?.label || lastDuel.stage;
 
         embed.addFields({
-            name: `Stage : ${stageLabel}`,
+            name: ``,
             value: `🏆 **Vainqueur :** <@${lastDuel.winnerId}> (${charWinLabel})\n💀 **Vaincu :** <@${lastDuel.loserId}> (${charLosLabel})`,
             inline: false
         });
@@ -353,7 +353,7 @@ client.on('interactionCreate', async interaction => {
                                 inline: false 
                             },
                             { 
-                                name: '🎖️ Étoile Polaire — Le MVP du Tournoi', 
+                                name: '🎖️ Étoile Polaire — Le MVP du le guerre Sainte', 
                                 value: `⭐ <@${mvpId}> avec un total dévastateur de **${stats[mvpId] || 0}** victoires ! Son Cosmos a guidé son équipe vers les sommets.`, 
                                 inline: false 
                             }

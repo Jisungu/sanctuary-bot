@@ -9,8 +9,8 @@ const playerSchema = new mongoose.Schema({
         wins: { type: Number, default: 0 },
         losses: { type: Number, default: 0 },
         tournamentsPlayed: { type: Number, default: 0 },
+        tournamentsWon:  { type: Number, default: 0 },
         mvpCount: { type: Number, default: 0 },
-        mostPlayedStage: { type: String, default: null },
         charactersPlayed: {
             type: Map,
             of: Number,

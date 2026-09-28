@@ -4,7 +4,7 @@ const { broadcastOverlayData } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('battle-check')
+        .setName('battle-checkin')
         .setDescription('Lance la phase d\'appel pour le sondage en cours.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

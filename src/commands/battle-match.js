@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
-const { characters, stages } = require('../utils/data');
-const { broadcastOverlayData } = require('../utils/overlayServer');
+const Player = require('../models/Player');
+const { characters } = require('../utils/data');
+const { broadcastOverlayData, toggleSwapSides } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,7 +12,7 @@ module.exports = {
         .addStringOption(option => option.setName('char1').setDescription('Personnage du P1').setRequired(true).setAutocomplete(true))
         .addStringOption(option => option.setName('p2').setDescription('Chevalier de la Team 2').setRequired(true).setAutocomplete(true))
         .addStringOption(option => option.setName('char2').setDescription('Personnage du P2').setRequired(true).setAutocomplete(true))
-        .addStringOption(option => option.setName('stage').setDescription('Stage du combat').setRequired(true).setAutocomplete(true))
+        .addBooleanOption(option => option.setName('swap').setDescription('Inverser l\'affichage de l\'overlay ?').setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async autocomplete(interaction) {
@@ -23,7 +24,6 @@ module.exports = {
                 const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
                 if (!battle) return interaction.respond([]);
 
-                // Récupération des IDs de l'équipe concernée (Team 1 pour p1, Team 2 pour p2)
                 const teamPlayerIds = focusedOption.name === 'p1' 
                     ? (battle.teams?.team1?.players || []) 
                     : (battle.teams?.team2?.players || []);
@@ -46,14 +46,49 @@ module.exports = {
                 return interaction.respond(filtered.map(c => ({ name: c.label, value: c.value })));
             }
 
-            // GESTION DES PERSONNAGES ET STAGES
-            let choices = (focusedOption.name === 'stage') ? stages : characters;
+            // GESTION DES PERSONNAGES (char1 / char2) AVEC SUGGESTION DU PLUS JOUÉ
+            if (focusedOption.name === 'char1' || focusedOption.name === 'char2') {
+                const query = focusedOption.value.toLowerCase();
+                const targetPlayerId = focusedOption.name === 'char1' 
+                    ? interaction.options.getString('p1') 
+                    : interaction.options.getString('p2');
 
-            const filtered = choices.filter(choice => 
-                choice.label.toLowerCase().includes(focusedOption.value.toLowerCase())
-            ).slice(0, 25);
+                let topCharValue = null;
 
-            await interaction.respond(filtered.map(c => ({ name: c.label, value: c.value })));
+                if (targetPlayerId) {
+                    const playerData = await Player.findById(targetPlayerId);
+                    if (playerData?.stats?.charactersPlayed) {
+                        const charEntries = playerData.stats.charactersPlayed instanceof Map 
+                            ? Array.from(playerData.stats.charactersPlayed.entries())
+                            : Object.entries(playerData.stats.charactersPlayed);
+
+                        if (charEntries.length > 0) {
+                            topCharValue = charEntries.sort((a, b) => b[1] - a[1])[0][0];
+                        }
+                    }
+                }
+
+                let filtered = characters.filter(choice => 
+                    choice.label.toLowerCase().includes(query) || choice.value.toLowerCase().includes(query)
+                );
+
+                // Si le joueur a un perso favori, on le place en tout premier avec une étoile
+                if (topCharValue) {
+                    const topCharIndex = filtered.findIndex(c => c.value === topCharValue);
+                    if (topCharIndex !== -1) {
+                        const [topChar] = filtered.splice(topCharIndex, 1);
+                        filtered.unshift({
+                            label: `⭐ ${topChar.label} (Plus joué)`,
+                            value: topChar.value
+                        });
+                    }
+                }
+
+                return interaction.respond(
+                    filtered.slice(0, 25).map(c => ({ name: c.label, value: c.value }))
+                );
+            }
+
         } catch (err) { 
             console.error("Erreur Autocomplete:", err); 
         }
@@ -62,7 +97,13 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
 
-        // p1 et p2 récupèrent directement les IDs envoyés par l'autocomplétion
+        const shouldSwap = interaction.options.getBoolean('swap');
+        let swapStatusText = '';
+        if (shouldSwap) {
+            const isSwapped = toggleSwapSides();
+            swapStatusText = `\n🔄 *Overlay inversé : ${isSwapped ? 'Équipe 2 à gauche' : 'Équipe 1 à gauche'}*`;
+        }
+
         const p1Id = interaction.options.getString('p1');
         const p2Id = interaction.options.getString('p2');
 
@@ -80,7 +121,6 @@ module.exports = {
 
         const char1Value = getTechValue(interaction.options.getString('char1'), characters);
         const char2Value = getTechValue(interaction.options.getString('char2'), characters);
-        const stageValue = getTechValue(interaction.options.getString('stage'), stages);
 
         try {
             const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
@@ -91,7 +131,6 @@ module.exports = {
                 p2: p2User.id,
                 char1: char1Value,
                 char2: char2Value,
-                stage: stageValue,
                 isPhoenix: false
             };
             await battle.save();
@@ -99,11 +138,10 @@ module.exports = {
             
             const char1Label = characters.find(c => c.value === char1Value)?.label || char1Value;
             const char2Label = characters.find(c => c.value === char2Value)?.label || char2Value;
-            const stageLabel = stages.find(s => s.value === stageValue)?.label || stageValue;
 
             const matchEmbed = new EmbedBuilder()
                 .setTitle('⚔️ Choc de Cosmos dans l\'Arène')
-                .setDescription(`Le duel se déroulera sur : **${stageLabel}**`)
+                .setDescription(swapStatusText ? swapStatusText.trim() : null)
                 .setColor('#e67e22')
                 .addFields(
                     { name: `🔵 ${battle.teams.team1.name}`, value: `<@${p1User.id}>\n**${char1Label}**`, inline: true },

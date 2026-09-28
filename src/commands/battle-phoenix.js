@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
-const { characters, stages } = require('../utils/data'); 
-const { broadcastOverlayData } = require('../utils/overlayServer');
+const { characters } = require('../utils/data'); 
+const { broadcastOverlayData, toggleSwapSides } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,15 +11,22 @@ module.exports = {
         .addStringOption(option => option.setName('char1').setDescription('Personnage de P1').setRequired(true).setAutocomplete(true))
         .addUserOption(option => option.setName('p2').setDescription('Chevalier Éliminé de l’Équipe 2').setRequired(true))
         .addStringOption(option => option.setName('char2').setDescription('Personnage de P2').setRequired(true).setAutocomplete(true))
-        .addStringOption(option => option.setName('stage').setDescription('L’arène du combat').setRequired(true).setAutocomplete(true))
+        .addBooleanOption(option => option.setName('swap').setDescription('Inverser l\'affichage de l\'overlay ?').setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
+        // Exécution du swap si l'option est activée
+        const shouldSwap = interaction.options.getBoolean('swap');
+        let swapStatusText = '';
+        if (shouldSwap) {
+            const isSwapped = toggleSwapSides();
+            swapStatusText = `\n\n🔄 *Overlay inversé : ${isSwapped ? 'Équipe 2 à gauche' : 'Équipe 1 à gauche'}*`;
+        }
+
         const p1 = interaction.options.getUser('p1');
         const char1 = interaction.options.getString('char1');
         const p2 = interaction.options.getUser('p2');
         const char2 = interaction.options.getString('char2');
-        const stage = interaction.options.getString('stage');
 
         if (p1.id === p2.id) {
             return interaction.reply({ content: "❌ Un Chevalier ne peut pas s'affronter lui-même !", ephemeral: true });
@@ -44,7 +51,6 @@ module.exports = {
                 char1: char1,
                 p2: p2.id,
                 char2: char2,
-                stage: stage,
                 isPhoenix: true
             };
 
@@ -53,11 +59,10 @@ module.exports = {
 
             const char1Label = characters.find(c => c.value === char1)?.label || char1;
             const char2Label = characters.find(c => c.value === char2)?.label || char2;
-            const stageLabel = stages.find(s => s.value === stage)?.label || stage;
 
             const matchEmbed = new EmbedBuilder()
                 .setTitle('🔥 DUEL DE LA RÉSURRECTION DU PHOENIX 🔥')
-                .setDescription(`**Stage :** ${stageLabel}\n\nLes Enfers s'ouvrent. Le gagnant de ce combat brisera ses chaînes et reviendra à la vie avec **1 vie** !`)
+                .setDescription(`Les Enfers s'ouvrent. Le gagnant de ce combat brisera ses chaînes et reviendra à la vie avec **1 vie** !${swapStatusText}`)
                 .setColor('#e67e22')
                 .addFields(
                     { name: `🔵 ${battle.teams.team1.name}`, value: `<@${p1.id}>\n*${char1Label}*`, inline: true },
@@ -84,18 +89,14 @@ module.exports = {
             return interaction.reply({ content: "❌ Erreur lors du lancement du duel de résurrection.", ephemeral: true });
         }
     },
+
     async autocomplete(interaction) {
         const focusedOption = interaction.options.getFocused(true);
-        let choices = [];
+        const query = (focusedOption.value || '').toLowerCase();
 
-        if (focusedOption.name === 'char1' || focusedOption.name === 'char2') {
-            choices = characters;
-        } else if (focusedOption.name === 'stage') {
-            choices = stages;
-        }
-
-        const filtered = choices.filter(choice => 
-            choice.label.toLowerCase().includes(focusedOption.value.toLowerCase())
+        const filtered = characters.filter(choice => 
+            choice.label.toLowerCase().includes(query) || 
+            choice.value.toLowerCase().includes(query)
         );
 
         await interaction.respond(

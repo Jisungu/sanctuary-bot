@@ -4,7 +4,7 @@ const { characters } = require('../utils/data');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('profile')
+        .setName('player-profile')
         .setDescription('Affiche la carte de visite et les statistiques détaillées d\'un Chevalier.')
         .addUserOption(option => 
             option.setName('joueur')
@@ -122,13 +122,13 @@ module.exports = {
                 { 
                     name: '⚔️ Bilan des Duels', 
                     value: `⚔️ **Combats totaux :** ${totalMatches}\n` +
-                           `✅ **Victoires :** ${wins} \vert{} ❌ **Défaites :** ${losses}\n` +
+                           `✅ **Victoires :** ${wins} | ❌ **Défaites :** ${losses}\n` +
                            `🔥 **Winrate :** ${winrate}%`, 
                     inline: true 
                 },
                 { name: '\u200B', value: '\u200B', inline: false },
                 { 
-                    name: '🥋 Top 3 Guerriers Utilisés', 
+                    name: '🥋 Top 3 Persos Utilisés', 
                     value: top3CharsText, 
                     inline: false 
                 },

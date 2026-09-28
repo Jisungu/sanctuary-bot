@@ -3,7 +3,7 @@ const Battle = require('../models/Battle');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('battle-clean')
+        .setName('battle-clean-channel')
         .setDescription('Supprime manuellement les salons vocaux de la dernière bataille terminée.')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 

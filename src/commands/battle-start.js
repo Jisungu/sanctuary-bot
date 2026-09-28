@@ -22,7 +22,7 @@ async function getOrCreateTeamRole(guild, teamName, color) {
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('battle-run')
+        .setName('battle-start')
         .setDescription('Répartit les Chevaliers et initialise leurs armures.')
         .addStringOption(option => option.setName('equipe1').setDescription('Nom de la Team 1').setRequired(true))
         .addStringOption(option => option.setName('equipe2').setDescription('Nom de la Team 2').setRequired(true))

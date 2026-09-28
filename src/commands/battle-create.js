@@ -74,7 +74,7 @@ module.exports = {
         } catch (error) {
             console.error("Erreur création Battle DB:", error);
             await interaction.followUp({ 
-                content: "❌ Une erreur dimensionnelle a empêché l'enregistrement du tournoi.", 
+                content: "❌ Une erreur dimensionnelle a empêché l'enregistrement du team battle.", 
                 ephemeral: true 
             });
         }
