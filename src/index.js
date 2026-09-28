@@ -22,6 +22,10 @@ app.disable('x-powered-by');
 // Déclare le dossier 'public' pour rendre les overlays accessibles
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+app.get('/', (req, res) => {
+    res.send('🤖 Bot launched & Overlay running!');
+});
+
 app.get('/score.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'score.html'));
 });
