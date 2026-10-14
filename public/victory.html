@@ -90,7 +90,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 100px;
+            padding: 0 60px;
             z-index: 10;
             opacity: 0;
             pointer-events: none;
@@ -113,15 +113,14 @@
             100% { opacity: 1; transform: translateX(0); }
         }
 
-        /* --- CÔTÉ GAUCHE : MVP --- */
+        /* --- CÔTÉ GAUCHE : ÉQUIPE DYNAMIQUE --- */
         .mvp-character-container {
             position: relative;
-            width: 750px;
-            height: 950px;
+            width: 1050px;
+            height: 850px;
             display: flex;
             justify-content: center;
-            align-items: flex-end;
-            filter: drop-shadow(0 0 35px rgba(245, 175, 25, 0.4));
+            align-items: center;
             opacity: 0;
         }
 
@@ -129,20 +128,124 @@
             animation: fadeInSlideLeft 2.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .mvp-character-image {
-            max-height: 950px;
-            max-width: 750px;
+        .team-members-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- CONFIGURATIONS DES LIGNES (1 À 5) --- */
+        .team-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* 1 MEMBRE */
+        .team-members-wrapper.layout-1 .team-row img { width: 480px; height: 530px; }
+
+        /* 2 MEMBRES */
+        .team-members-wrapper.layout-2 .team-row { gap: 15px; }
+        .team-members-wrapper.layout-2 .team-row img { width: 400px; height: 440px; }
+
+        /* 3 MEMBRES : 1 ligne de 3 avec MVP au milieu */
+        .team-members-wrapper.layout-3 .team-row { gap: 5px; }
+        .team-members-wrapper.layout-3 .team-row img { width: 340px; height: 380px; }
+
+        /* 4 MEMBRES : 1 ligne de 1 (MVP) en haut, 1 ligne de 3 en dessous */
+        .team-members-wrapper.layout-4 { gap: 45px; }
+        .team-members-wrapper.layout-4 .row-bottom { gap: 45px; }
+        .team-members-wrapper.layout-4 .row-top img { width: 320px; height: 350px; }
+        .team-members-wrapper.layout-4 .row-bottom img { width: 260px; height: 290px; }
+
+        /* 5 MEMBRES : 1 ligne de 3 (avec MVP au milieu), 1 ligne de 2 en dessous */
+        .team-members-wrapper.layout-5 { gap: 45px; }
+        .team-members-wrapper.layout-5 .row-top { gap: 45px; }
+        .team-members-wrapper.layout-5 .row-bottom { gap: 45px; }
+        .team-members-wrapper.layout-5 .row-top img { width: 310px; height: 340px; }
+        .team-members-wrapper.layout-5 .row-bottom img { width: 290px; height: 320px; }
+
+        .member-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .member-card img {
             object-fit: contain;
-            mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 15%);
-            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 15%);
+            border-radius: 16px;
+            border: 2px solid rgba(161, 84, 255, 0.5);
+            background: rgba(13, 4, 28, 0.7);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+            mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 12%);
+            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 12%);
+        }
+
+        .member-name {
+            margin-top: 10px;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+            text-align: center;
+            max-width: 240px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* MISE EN VALEUR DU MVP */
+        .member-card.is-mvp {
+            transform: scale(1.15);
+            z-index: 5;
+            filter: drop-shadow(0 0 45px rgba(245, 175, 25, 0.75));
+        }
+
+        .team-members-wrapper.layout-1 .member-card.is-mvp img,
+        .team-members-wrapper.layout-2 .member-card.is-mvp img {
+            transform: scale(1.05);
+        }
+
+        .member-card.is-mvp img {
+            border: 4px solid #ffd700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.65), 0 20px 45px rgba(0, 0, 0, 0.95);
+            background: linear-gradient(180deg, rgba(42, 10, 82, 0.85) 0%, rgba(13, 4, 28, 0.95) 100%);
+        }
+
+        .member-card.is-mvp .member-name {
+            color: #ffd700;
+            font-size: 1.35rem;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+        }
+
+        .mvp-badge-tag {
+            position: absolute;
+            top: -18px;
+            background: linear-gradient(135deg, #ffd700 0%, #f5af19 100%);
+            color: #000;
+            font-family: 'Open Sans', sans-serif;
+            font-weight: 900;
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            z-index: 10;
         }
 
         /* --- CÔTÉ DROIT : PANNEAU DE VICTOIRE --- */
         .victory-panel {
-            width: 900px;
+            width: 720px;
             display: flex;
             flex-direction: column;
-            gap: 40px;
+            gap: 35px;
             align-items: flex-start;
         }
 
@@ -152,7 +255,7 @@
             border: 2px solid rgba(245, 175, 25, 0.8);
             border-left: 10px solid #f5af19;
             border-radius: 8px;
-            padding: 30px 40px;
+            padding: 25px 35px;
             width: 100%;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(245, 175, 25, 0.2);
             opacity: 0;
@@ -165,7 +268,7 @@
         .victory-title {
             font-family: 'Cinzel', serif;
             font-weight: 900;
-            font-size: 3.5rem;
+            font-size: 3.2rem;
             color: #ffd700;
             letter-spacing: 4px;
             text-shadow: 0 0 15px rgba(255, 215, 0, 0.6), 0 0 30px rgba(161, 84, 255, 0.8);
@@ -178,13 +281,12 @@
             display: block;
         }
 
-        /* LISTE DES MEMBRES DE L'ÉQUIPE GAGNANTE */
         .victory-team-members {
             font-family: 'Open Sans', sans-serif;
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: #ffd700;
-            margin-top: 10px;
+            margin-top: 8px;
             letter-spacing: 1px;
         }
 
@@ -194,11 +296,11 @@
             border: 1px solid rgba(161, 84, 255, 0.6);
             border-left: 8px solid #a154ff;
             border-radius: 8px;
-            padding: 25px 35px;
+            padding: 22px 30px;
             width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(161, 84, 255, 0.25);
             opacity: 0;
         }
@@ -209,7 +311,7 @@
 
         .mvp-label {
             font-family: 'Open Sans', sans-serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             font-weight: 800;
             color: #a154ff;
             letter-spacing: 3px;
@@ -218,7 +320,7 @@
 
         .mvp-player-name {
             font-family: 'Cinzel', serif;
-            font-size: 2.8rem;
+            font-size: 2.5rem;
             font-weight: 900;
             color: #ffffff;
             letter-spacing: 2px;
@@ -227,7 +329,7 @@
 
         .mvp-stats {
             font-family: 'Open Sans', sans-serif;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 700;
             color: #ffd700;
             display: flex;
@@ -305,9 +407,9 @@
             <div class="center-content">Le Sanctuaire</div>
         </div>
 
-        <!-- PERSONNAGE MVP À GAUCHE -->
+        <!-- PERSONNAGES : STRUCTURES MULTI-LIGNES SUR MESURE -->
         <div class="mvp-character-container">
-            <img id="mvpCharImg" class="mvp-character-image" src="" alt="MVP Character">
+            <div class="team-members-wrapper" id="teamMembersWrapper"></div>
         </div>
 
         <!-- PANNEAU DROIT -->
@@ -318,7 +420,6 @@
                     VICTOIRE
                     <span class="victory-team-name">ÉQUIPE <span id="winningTeamName"></span></span>
                 </div>
-                <!-- Éléments ajoutés -->
                 <div class="victory-team-members" id="winningTeamMembers"></div>
             </div>
 
@@ -335,11 +436,30 @@
 
     </div>
     <audio id="victorySound" src="audio/victory.mp3" preload="auto"></audio>
-    <script>
-    let previousStatus = null;
+
+<script>
     let hideTimeout = null;
+    let previousStatus = null;
+
+    function resetVictorySequence() {
+        const stageBg = document.getElementById('stageBg');
+        const stageCanvas = document.getElementById('stageCanvas');
+        const victorySound = document.getElementById('victorySound');
+
+        clearTimeout(hideTimeout);
+
+        if (stageBg) stageBg.classList.remove('visible');
+        if (stageCanvas) stageCanvas.classList.remove('visible', 'animate');
+
+        if (victorySound) {
+            victorySound.pause();
+            victorySound.currentTime = 0;
+        }
+    }
 
     function triggerVictorySequence() {
+        resetVictorySequence(); // Réinitialise l'état avant de lancer
+
         const stageBg = document.getElementById('stageBg');
         const stageCanvas = document.getElementById('stageCanvas');
         const victorySound = document.getElementById('victorySound');
@@ -355,18 +475,88 @@
         stageBg.classList.add('visible');
         stageCanvas.classList.add('visible', 'animate');
 
-        clearTimeout(hideTimeout);
         hideTimeout = setTimeout(() => {
             stageBg.classList.remove('visible');
             stageCanvas.classList.remove('visible');
-        }, 10000);
+        }, 8000);
     }
 
-    function resetVictorySequence() {
-        const stageBg = document.getElementById('stageBg');
-        const stageCanvas = document.getElementById('stageCanvas');
-        stageBg.classList.remove('visible');
-        stageCanvas.classList.remove('visible', 'animate');
+    function createCardHTML(member) {
+        const charName = (member.char || 'default').toLowerCase().replace(/\s+/g, '_');
+        const imgSrc = `img/characters/${charName}.webp`;
+        return `
+            <div class="member-card ${member.isMvp ? 'is-mvp' : ''}">
+                ${member.isMvp ? '<div class="mvp-badge-tag">⭐ MVP</div>' : ''}
+                <img src="${imgSrc}" alt="${member.name}">
+                <div class="member-name">${member.name}</div>
+            </div>
+        `;
+    }
+
+    function renderTeamMembers(mvp, teammates) {
+        const wrapper = document.getElementById('teamMembersWrapper');
+        wrapper.innerHTML = '';
+
+        const members = [];
+        if (mvp && mvp.name) members.push({ ...mvp, isMvp: true });
+        if (teammates && Array.isArray(teammates)) {
+            teammates.forEach(t => {
+                if (t.name) members.push({ ...t, isMvp: false });
+            });
+        }
+
+        const count = Math.min(Math.max(members.length, 1), 5);
+        wrapper.className = `team-members-wrapper layout-${count}`;
+
+        const mvpMember = members.find(m => m.isMvp) || members[0];
+        const nonMvp = members.filter(m => m !== mvpMember);
+
+        if (count === 1 || count === 2) {
+            const row = document.createElement('div');
+            row.className = 'team-row';
+            
+            const ordered = [];
+            const half = Math.ceil(nonMvp.length / 2);
+            ordered.push(...nonMvp.slice(0, half));
+            if (mvpMember) ordered.push(mvpMember);
+            ordered.push(...nonMvp.slice(half));
+
+            ordered.forEach(m => row.innerHTML += createCardHTML(m));
+            wrapper.appendChild(row);
+
+        } else if (count === 3) {
+            const row = document.createElement('div');
+            row.className = 'team-row';
+            
+            const ordered = [nonMvp[0], mvpMember, nonMvp[1]].filter(Boolean);
+            ordered.forEach(m => row.innerHTML += createCardHTML(m));
+            wrapper.appendChild(row);
+
+        } else if (count === 4) {
+            const rowTop = document.createElement('div');
+            rowTop.className = 'team-row row-top';
+            rowTop.innerHTML = createCardHTML(mvpMember);
+            wrapper.appendChild(rowTop);
+
+            const rowBottom = document.createElement('div');
+            rowBottom.className = 'team-row row-bottom';
+            nonMvp.forEach(m => rowBottom.innerHTML += createCardHTML(m));
+            wrapper.appendChild(rowBottom);
+
+        } else if (count === 5) {
+            const rowTop = document.createElement('div');
+            rowTop.className = 'team-row row-top';
+            
+            const topThree = [nonMvp[0], mvpMember, nonMvp[1]].filter(Boolean);
+            topThree.forEach(m => rowTop.innerHTML += createCardHTML(m));
+            wrapper.appendChild(rowTop);
+
+            const rowBottom = document.createElement('div');
+            rowBottom.className = 'team-row row-bottom';
+            const bottomTwo = nonMvp.slice(2);
+            bottomTwo.forEach(m => rowBottom.innerHTML += createCardHTML(m));
+            wrapper.appendChild(rowBottom);
+        }
     }
 
     function connectWebSocket() {
@@ -382,21 +572,19 @@
 
             const currentStatus = data.status;
 
-            if (previousStatus === 'started' && currentStatus === 'finished') {
+            // On déclenche uniquement si on passe d'un état "started" (ou autre) à "finished"
+            if (currentStatus === 'finished' && previousStatus === 'started') {
                 if (data.winningTeam) {
                     const teamNameEl = document.getElementById('winningTeamName');
                     teamNameEl.textContent = data.winningTeam.name || 'ÉQUIPE';
                     
-                    // Gestion dynamique de la couleur (#6bb3dd pour T1, #d75454 pour T2)
                     if (data.winningTeam.teamIndex === 1) {
                         teamNameEl.style.color = '#6bb3dd';
                     } else {
                         teamNameEl.style.color = '#d75454';
                     }
                     
-                    // Récupération du nom du MVP + noms des coéquipiers
                     const allMembers = [];
-                    
                     if (data.mvp && data.mvp.name) {
                         allMembers.push(data.mvp.name);
                     }
@@ -407,25 +595,20 @@
                         });
                     }
 
-                    // Affichage des membres séparés par un point central
                     document.getElementById('winningTeamMembers').textContent = allMembers.join(' • ');
                 }
 
                 if (data.mvp) {
                     document.getElementById('mvpPlayerName').textContent = data.mvp.name || 'JOUEUR';
                     document.getElementById('mvpKoCount').textContent = `${data.mvp.kos || 0} KO`;
-                    
-                    if (data.mvp.char) {
-                        const charName = data.mvp.char.toLowerCase().replace(/\s+/g, '_');
-                        document.getElementById('mvpCharImg').src = `img/characters/${charName}.webp`;
-                    }
                 }
 
+                renderTeamMembers(data.mvp, data.winningTeam ? data.winningTeam.teammates : []);
+
                 triggerVictorySequence();
-            } else if (currentStatus === 'started') {
-                resetVictorySequence();
             }
 
+            // On met à jour le statut précédent pour le prochain message
             previousStatus = currentStatus;
         };
 

@@ -173,4 +173,20 @@ async function broadcastOverlayData() {
     }
 }
 
-module.exports = { initWebSocket, broadcastOverlayData, toggleSwapSides };
+function broadcastTossResult(team1Name, team2Name, designatedTeam) {
+    if (!wss) return;
+    const tossData = JSON.stringify({
+        type: 'toss_triggered',
+        team1: team1Name,
+        team2: team2Name,
+        designatedTeam: designatedTeam
+    });
+
+    wss.clients.forEach(client => {
+        if (client.readyState === 1) {
+            client.send(tossData);
+        }
+    });
+}
+
+module.exports = { initWebSocket, broadcastOverlayData, toggleSwapSides, broadcastTossResult };

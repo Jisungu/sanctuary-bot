@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
+const { broadcastTossResult } = require('../utils/overlayServer');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -26,6 +27,9 @@ module.exports = {
         const isTeam1 = Math.random() < 0.5;
         const designatedTeam = isTeam1 ? team1 : team2;
         const secondTeam = isTeam1 ? team2 : team1;
+
+        // Déclenchement de l'animation HTML de l'Horloge du Sanctuaire
+        broadcastTossResult(team1, team2, designatedTeam);
 
         const tossEmbed = new EmbedBuilder()
             .setTitle('🔥 L\'Horloge du Sanctuaire s\'éveille !')

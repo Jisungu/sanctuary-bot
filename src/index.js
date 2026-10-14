@@ -38,8 +38,12 @@ app.get('/rules.html', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'rules.html'));
 });
 
+app.get('/coin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'public', 'coin.html'));
+});
+
 // Route de check de santé pour Render
-app.get('/health', (req, res) => {
+app.get('/', (req, res) => {
     res.status(200).send('🤖 Bot & Overlay unifiés en ligne !');
 });
 
@@ -311,40 +315,7 @@ client.on('interactionCreate', async interaction => {
                     await broadcastOverlayData();
                     await interaction.deleteReply();
 
-                    // --- NETTOYAGE DES RÔLES ET DES VOCAUX ---
-                    try {
-                        const guild = interaction.guild;
-                        const roleTB = guild.roles.cache.find(r => r.name === 'TeamBattle');
-                        const roleT1 = guild.roles.cache.find(r => r.name.toLowerCase() === battle.teams.team1.name.toLowerCase());
-                        const roleT2 = guild.roles.cache.find(r => r.name.toLowerCase() === battle.teams.team2.name.toLowerCase());
-
-                        const allParticipantIds = [
-                            ...battle.teams.team1.players,
-                            ...battle.teams.team2.players
-                        ];
-
-                        // Retrait des rôles (TeamBattle, T1, T2) à tous les participants
-                        for (const playerId of allParticipantIds) {
-                            const member = await guild.members.fetch(playerId).catch(() => null);
-                            if (member) {
-                                const rolesToRemove = [];
-                                if (roleTB && member.roles.cache.has(roleTB.id)) rolesToRemove.push(roleTB);
-                                if (roleT1 && member.roles.cache.has(roleT1.id)) rolesToRemove.push(roleT1);
-                                if (roleT2 && member.roles.cache.has(roleT2.id)) rolesToRemove.push(roleT2);
-
-                                if (rolesToRemove.length > 0) {
-                                    await member.roles.remove(rolesToRemove).catch(e => console.error(`Erreur retrait rôles (${playerId}):`, e));
-                                }
-                            }
-                        }
-
-                        // Suppression des rôles temporaires d'équipes
-                        if (roleT1) await roleT1.delete().catch(() => null);
-                        if (roleT2) await roleT2.delete().catch(() => null);
-
-                    } catch (cleanError) {
-                        console.error("Erreur lors du nettoyage de fin de battle :", cleanError);
-                    }
+                    // --- LES RÔLES ET LES SALONS VOCAUX SONT CONSERVÉS ---
 
                     const victoryEmbed = new EmbedBuilder()
                         .setTitle('🏆 LE SANCTUAIRE A SES VAINQUEURS !')
