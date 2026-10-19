@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Battle = require('../models/Battle');
+const { addPlayers, getBattleFields } = require('../utils/battleRegistration');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -51,29 +52,24 @@ module.exports = {
 
         const targetIds = targets.map(u => u.id);
         const targetNames = targets.map(u => `**${u.username}**`).join(', ');
+        const { activeIds, waitlistedIds } = addPlayers(battle, targetIds);
 
         // Attribution du rôle "TeamBattle"
         const role = interaction.guild.roles.cache.find(r => r.name === 'TeamBattle');
         if (role) {
-            for (const user of targets) {
-                const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+            for (const userId of activeIds) {
+                const member = await interaction.guild.members.fetch(userId).catch(() => null);
                 if (member) {
-                    await member.roles.add(role).catch(err => console.error(`Impossible d'ajouter le rôle à ${user.username}:`, err));
+                    await member.roles.add(role).catch(err => console.error(`Impossible d'ajouter le rôle à ${userId}:`, err));
                 }
             }
         }
 
-        let updateData = { $addToSet: { participants: {$each: targetIds } } };
-
         if (battle.status === 'calling') {
-            updateData.$addToSet.presents = {$each: targetIds };
+            battle.presents = [...new Set([...battle.presents, ...activeIds])];
         }
-
-        const updatedBattle = await Battle.findOneAndUpdate(
-            { _id: battle._id },
-            updateData,
-            { returnDocument: 'after' }
-        );
+        await battle.save();
+        const updatedBattle = battle;
 
         if (!updatedBattle.channelId || !updatedBattle.messageId) {
             return interaction.reply({ 
@@ -89,28 +85,12 @@ module.exports = {
 
             let newEmbed;
 
-            if (updatedBattle.status === 'registration') {
-                newEmbed = EmbedBuilder.from(originalEmbed).setFields({
-                    name: `Chevaliers inscrits (${updatedBattle.participants.length})`,
-                    value: updatedBattle.participants.map(id => `<@${id}>`).join('\n') || 'Aucun chevalier déclaré'
-                });
-            } else {
-                newEmbed = EmbedBuilder.from(originalEmbed).setFields(
-                    { 
-                        name: 'Chevaliers attendus', 
-                        value: updatedBattle.participants.map(id => `<@${id}>`).join('\n') 
-                    },
-                    { 
-                        name: `Présents (${updatedBattle.presents.length}/${updatedBattle.participants.length}) ✅`, 
-                        value: updatedBattle.presents.map(id => `<@${id}>`).join('\n') || 'En attente...' 
-                    }
-                );
-            }
+            newEmbed = EmbedBuilder.from(originalEmbed).setFields(getBattleFields(updatedBattle));
 
             await message.edit({ embeds: [newEmbed] });
 
             return interaction.reply({ 
-                content: `✅ ${targetNames} a/ont été ajouté(s) avec succès (${updatedBattle.status === 'calling' ? 'inscrit(s) + présent(s)' : 'inscrit(s)'})${!role ? '\n⚠️ Rôle **TeamBattle** introuvable sur ce serveur.' : ''}`, 
+                content: `✅ ${targetNames} ajouté(s) avec succès${activeIds.length ? ` (${updatedBattle.status === 'calling' ? 'inscrit(s) + présent(s)' : 'inscrit(s)'})` : ''}${waitlistedIds.length ? ` ⏳ ${waitlistedIds.length} joueur(s) placé(s) en liste d'attente.` : ''}${!role && activeIds.length ? '\n⚠️ Rôle **TeamBattle** introuvable sur ce serveur.' : ''}`,
                 flags: [MessageFlags.Ephemeral] 
             });
 

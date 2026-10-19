@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Battle = require('../models/Battle');
 const { broadcastOverlayData } = require('../utils/overlayServer');
+const { getBattleFields } = require('../utils/battleRegistration');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -29,18 +30,7 @@ module.exports = {
             .setTitle('📢 L\'Appel d\'Athéna')
             .setDescription('Le temps des préparatifs est révolu. Manifestez votre présence avant que l\'Horloge du Sanctuaire ne s\'embrase !\n\n⚠️ **Seuls les Chevaliers inscrits au préalable peuvent prêter serment.**')
             .setColor('#e74c3c')
-            .addFields(
-                { 
-                    name: 'Guerriers attendus', 
-                    value: battle.participants.map(id => `<@${id}>`).join('\n') 
-                },
-                { 
-                    name: `Présents (${battle.presents.length}/${battle.participants.length})`, 
-                    value: battle.presents.length > 0 
-                        ? battle.presents.map(id => `<@${id}>`).join('\n') 
-                        : 'En attente de confirmation...' 
-                }
-            )
+            .addFields(getBattleFields(battle))
             .setTimestamp();
 
         const rowAppel = new ActionRowBuilder().addComponents(

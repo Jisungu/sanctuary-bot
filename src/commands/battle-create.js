@@ -68,6 +68,7 @@ module.exports = {
                 heureTournoi: heureTournoi,
                 status: 'registration',
                 participants: [],
+                waitlist: [],
                 presents: [],
                 history: []
             });

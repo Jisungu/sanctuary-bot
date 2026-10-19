@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const Battle = require('../models/Battle');
+const { removePlayers, getBattleFields } = require('../utils/battleRegistration');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -63,17 +64,18 @@ module.exports = {
             }
         }
 
-        // Retrait des tableaux participants et presents en BDD
-        const updatedBattle = await Battle.findOneAndUpdate(
-            { _id: battle._id },
-            { 
-                $pull: { 
-                    participants: { $in: targetIds },
-                    presents: { $in: targetIds }
-                } 
-            },
-            { returnDocument: 'after' }
-        );
+        const { promotedIds } = removePlayers(battle, targetIds);
+        await battle.save();
+        const updatedBattle = battle;
+
+        if (role) {
+            for (const userId of promotedIds) {
+                const member = await interaction.guild.members.fetch(userId).catch(() => null);
+                if (member) {
+                    await member.roles.add(role).catch(err => console.error(`Impossible d'ajouter le rôle au joueur promu ${userId}:`, err));
+                }
+            }
+        }
 
         if (!updatedBattle.channelId || !updatedBattle.messageId) {
             return interaction.reply({ 
@@ -89,28 +91,12 @@ module.exports = {
 
             let newEmbed;
 
-            if (updatedBattle.status === 'registration') {
-                newEmbed = EmbedBuilder.from(originalEmbed).setFields({
-                    name: `Chevaliers inscrits (${updatedBattle.participants.length})`,
-                    value: updatedBattle.participants.map(id => `<@${id}>`).join('\n') || 'Aucun chevalier déclaré'
-                });
-            } else {
-                newEmbed = EmbedBuilder.from(originalEmbed).setFields(
-                    { 
-                        name: 'Chevaliers attendus', 
-                        value: updatedBattle.participants.map(id => `<@${id}>`).join('\n') || 'Aucun chevalier attendu'
-                    },
-                    { 
-                        name: `Présents (${updatedBattle.presents.length}/${updatedBattle.participants.length}) ✅`, 
-                        value: updatedBattle.presents.map(id => `<@${id}>`).join('\n') || 'En attente...' 
-                    }
-                );
-            }
+            newEmbed = EmbedBuilder.from(originalEmbed).setFields(getBattleFields(updatedBattle));
 
             await message.edit({ embeds: [newEmbed] });
 
             return interaction.reply({ 
-                content: `🗑️ ${targetNames} a/ont été retiré(s) avec succès.`, 
+                content: `🗑️ ${targetNames} a/ont été retiré(s) avec succès.${promotedIds.length ? ` ⏳ ${promotedIds.map(id => `<@${id}>`).join(', ')} rejoint/rejoignent les inscrits depuis la liste d'attente.` : ''}`,
                 flags: [MessageFlags.Ephemeral] 
             });
 

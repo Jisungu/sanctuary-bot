@@ -11,6 +11,7 @@ const Battle = require('./models/Battle');
 const Player = require('./models/Player');
 const { characters, stages } = require('./utils/data'); 
 const { initWebSocket, broadcastOverlayData } = require('./utils/overlayServer');
+const { addPlayers, removePlayers, getBattleFields } = require('./utils/battleRegistration');
 
 // 1. CONNEXION MONGODB
 mongoose.connect(process.env.MONGODB_URI);
@@ -127,6 +128,7 @@ async function getOrCreateTBRole(guild) {
 
 // 4. GESTION DES INTERACTIONS (Slash Commands, Autocomplete, Boutons)
 client.on('interactionCreate', async interaction => {
+    try {
     if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
         if (command) await command.autocomplete(interaction);
@@ -158,23 +160,42 @@ client.on('interactionCreate', async interaction => {
 
                 await interaction.deferUpdate();
 
-                let updateQuery = {};
                 const tbRole = await getOrCreateTBRole(interaction.guild);
+                let battle;
 
                 // --- GESTION DES INSCRIPTIONS ET DU RÔLE ---
                 if (customId === 'join_battle') {
-                    updateQuery = { $addToSet: { participants: user.id } };
-                    
-                    try {
-                        if (!interaction.member.roles.cache.has(tbRole.id)) {
-                            await interaction.member.roles.add(tbRole);
+                    const { activeIds, waitlistedIds } = addPlayers(activeBattle, [user.id]);
+                    await activeBattle.save();
+                    battle = activeBattle;
+
+                    if (activeIds.length) {
+                        try {
+                            if (!interaction.member.roles.cache.has(tbRole.id)) {
+                                await interaction.member.roles.add(tbRole);
+                            }
+                        } catch (roleErr) {
+                            console.error("Erreur lors de l'ajout du rôle TeamBattle :", roleErr);
                         }
-                    } catch (roleErr) {
-                        console.error("Erreur lors de l'ajout du rôle TeamBattle :", roleErr);
                     }
 
+                    if (waitlistedIds.length) {
+                        await interaction.followUp({
+                            content: `⏳ La bataille est complète. Tu as été ajouté(e) en **position ${battle.waitlist.length}** sur la liste d'attente.`,
+                            ephemeral: true
+                        });
+                    } else if (!activeIds.length) {
+                        await interaction.followUp({
+                            content: battle.participants.includes(user.id)
+                                ? "✅ Tu es déjà inscrit(e) à cette bataille."
+                                : `⏳ Tu es déjà en liste d'attente (position ${battle.waitlist.indexOf(user.id) + 1}).`,
+                            ephemeral: true
+                        });
+                    }
                 } else if (customId === 'leave_battle') {
-                    updateQuery = { $pull: { participants: user.id, presents: user.id } };
+                    const { promotedIds } = removePlayers(activeBattle, [user.id]);
+                    await activeBattle.save();
+                    battle = activeBattle;
 
                     try {
                         if (interaction.member.roles.cache.has(tbRole.id)) {
@@ -184,33 +205,46 @@ client.on('interactionCreate', async interaction => {
                         console.error("Erreur lors du retrait du rôle TeamBattle :", roleErr);
                     }
 
-                } else if (customId === 'confirm_presence') {
-                    updateQuery = { $addToSet: { presents: user.id } };
-                } else if (customId === 'force_presence') {
-                    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) return;
-                    updateQuery = { $set: { presents: activeBattle.participants } };
-                }
+                    for (const promotedId of promotedIds) {
+                        try {
+                            const member = await interaction.guild.members.fetch(promotedId);
+                            await member.roles.add(tbRole);
+                        } catch (roleErr) {
+                            console.error(`Erreur lors de l'ajout du rôle TeamBattle au joueur promu ${promotedId} :`, roleErr);
+                        }
+                    }
 
-                const battle = await Battle.findOneAndUpdate(
-                    { _id: activeBattle._id },
-                    updateQuery,
-                    { new: true }
-                );
+                    if (!activeBattle.participants.includes(user.id) && !activeBattle.waitlist.includes(user.id)) {
+                        await interaction.followUp({
+                            content: promotedIds.length
+                                ? `✅ Tu as quitté la bataille. <@${promotedIds[0]}> rejoint les inscrits depuis la liste d'attente.`
+                                : "✅ Tu as quitté la bataille.",
+                            ephemeral: true
+                        });
+                    }
+                } else if (customId === 'confirm_presence') {
+                    battle = await Battle.findOneAndUpdate(
+                        { _id: activeBattle._id },
+                        { $addToSet: { presents: user.id } },
+                        { new: true }
+                    );
+                } else if (customId === 'force_presence') {
+                    if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                        return interaction.followUp({
+                            content: "❌ Seuls les administrateurs peuvent confirmer la présence de tous les joueurs.",
+                            ephemeral: true
+                        });
+                    }
+                    battle = await Battle.findOneAndUpdate(
+                        { _id: activeBattle._id },
+                        { $set: { presents: activeBattle.participants } },
+                        { new: true }
+                    );
+                }
 
                 const originalEmbed = interaction.message.embeds[0];
                 const updatedEmbed = EmbedBuilder.from(originalEmbed);
-
-                if (battle.status === 'calling') {
-                    updatedEmbed.setFields(
-                        { name: 'Guerriers attendus', value: battle.participants.map(id => `<@${id}>`).join('\n') || '...' },
-                        { name: `Présents (${battle.presents.length}/${battle.participants.length})`, value: battle.presents.map(id => `<@${id}>`).join('\n') || 'En attente...' }
-                    );
-                } else {
-                    updatedEmbed.setFields({
-                        name: `📜 Chevaliers Inscrits (${battle.participants.length})`,
-                        value: battle.participants.map(id => `<@${id}>`).join('\n') || '_Aucun guerrier n\'a encore répondu à l\'appel d\'Athéna._'
-                    });
-                }
+                updatedEmbed.setFields(getBattleFields(battle));
 
                 await interaction.editReply({ embeds: [updatedEmbed] });
                 
@@ -252,6 +286,8 @@ client.on('interactionCreate', async interaction => {
                 });
 
                 let currentLives = battle.viesActuelles.get(loserId.toString()) ?? 0;
+                const winnerChar = isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2;
+                const loserChar = isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1;
                 battle.viesActuelles.set(loserId.toString(), Math.max(0, currentLives - 1));
                 battle.currentMatch = undefined; 
                 battle.markModified('viesActuelles');
@@ -293,8 +329,30 @@ client.on('interactionCreate', async interaction => {
                 const t1Lives = battle.teams.team1.players.reduce((acc, id) => acc + (battle.viesActuelles.get(id.toString()) || 0), 0);
                 const t2Lives = battle.teams.team2.players.reduce((acc, id) => acc + (battle.viesActuelles.get(id.toString()) || 0), 0);
 
-                if (t1Lives === 0 || t2Lives === 0) {
+                const battleFinished = t1Lives === 0 || t2Lives === 0;
+                if (battleFinished) {
                     battle.status = 'finished';
+                }
+
+                await battle.save();
+                await broadcastOverlayData();
+
+                await Promise.all([
+                    Player.findByIdAndUpdate(winnerId, {
+                        $inc: {
+                            'stats.wins': 1,
+                            [`stats.charactersPlayed.${winnerChar}`]: 1
+                        }
+                    }, { upsert: true }),
+                    Player.findByIdAndUpdate(loserId, {
+                        $inc: {
+                            'stats.losses': 1,
+                            [`stats.charactersPlayed.${loserChar}`]: 1
+                        }
+                    }, { upsert: true })
+                ]);
+
+                if (battleFinished) {
                     const winningTeam = t1Lives > 0 ? battle.teams.team1 : battle.teams.team2;
                     const stats = {};
                     battle.history.forEach(d => { stats[d.winnerId] = (stats[d.winnerId] || 0) + 1; });
@@ -311,8 +369,6 @@ client.on('interactionCreate', async interaction => {
                         }
                     }).join('\n');
 
-                    await battle.save();
-                    await broadcastOverlayData();
                     await interaction.deleteReply();
 
                     // --- LES RÔLES ET LES SALONS VOCAUX SONT CONSERVÉS ---
@@ -339,8 +395,6 @@ client.on('interactionCreate', async interaction => {
                     return await interaction.channel.send({ embeds: [victoryEmbed] });
                 }
                 
-                await battle.save();
-                await broadcastOverlayData();
                 await interaction.deleteReply();
                 await sendBattleStatus(interaction);
 
@@ -378,24 +432,6 @@ client.on('interactionCreate', async interaction => {
                         await interaction.channel.send({ embeds: [autoPhoenixEmbed] });
                     }
                 }
-
-                // Statistiques des joueurs
-                const winChar = isP1Winner ? battle.currentMatch.char1 : battle.currentMatch.char2;
-                const losChar = isP1Winner ? battle.currentMatch.char2 : battle.currentMatch.char1;
-
-                await Player.findByIdAndUpdate(winnerId, {
-                    $inc: { 
-                        'stats.wins': 1,
-                        [`stats.charactersPlayed.${winChar}`]: 1
-                    }
-                }, { upsert: true });
-
-                await Player.findByIdAndUpdate(loserId, {
-                    $inc: { 
-                        'stats.losses': 1,
-                        [`stats.charactersPlayed.${losChar}`]: 1
-                    }
-                }, { upsert: true });
 
             } catch (err) { console.error("Erreur victoire:", err); }
         }
@@ -485,6 +521,33 @@ client.on('interactionCreate', async interaction => {
                 console.error("Erreur lors du phoenix-conversion :", error);
                 return;
             }
+        }
+    }
+    } catch (error) {
+        console.error("Erreur inattendue lors du traitement d'une interaction :", error);
+
+        if (interaction.isAutocomplete()) {
+            try {
+                await interaction.respond([]);
+            } catch (responseError) {
+                console.error("Impossible de répondre à l'autocomplétion après une erreur :", responseError);
+            }
+            return;
+        }
+
+        try {
+            const errorResponse = {
+                content: "❌ Une erreur inattendue est survenue. Réessaie dans quelques instants.",
+                ephemeral: true
+            };
+
+            if (interaction.deferred || interaction.replied) {
+                await interaction.followUp(errorResponse);
+            } else {
+                await interaction.reply(errorResponse);
+            }
+        } catch (responseError) {
+            console.error("Impossible d'envoyer le message d'erreur à l'interaction :", responseError);
         }
     }
 });

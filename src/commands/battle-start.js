@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const Player = require('../models/Player');
 const Battle = require('../models/Battle');
 const { broadcastOverlayData } = require('../utils/overlayServer');
@@ -59,30 +59,25 @@ module.exports = {
                 });
             }
 
-            // SI MODE AUTOMATIQUE : On applique directement l'algorithme d'origine[cite: 6]
             if (!isManual) {
                 await interaction.deferReply({ ephemeral: false });
                 return await finalizeAndStartBattle(interaction, battle, team1Name, team2Name, viesInitiales, null);
             }
 
-            // SI MODE MANUEL : Construction des options uniquement avec les joueurs inscrits
             const options = [];
             for (const p of registeredPlayers) {
                 let displayName = p._id;
                 try {
                     const member = await interaction.guild.members.fetch(p._id);
                     displayName = member.displayName || member.user.username;
-                } catch (e) {
-                    // Fallback si le membre ne peut pas être fetch
-                }
+                } catch (e) {}
 
                 options.push({
-                    label: displayName.substring(0, 100), // Limite Discord à 100 caractères
+                    label: displayName.substring(0, 100),
                     value: p._id
                 });
             }
 
-            // Discord limite le nombre de choix d'un menu déroulant à 25 maximum
             if (options.length === 0) {
                 return interaction.reply({ content: "❌ Aucun joueur n'est inscrit dans la phase d'appel.", ephemeral: true });
             }
@@ -102,16 +97,13 @@ module.exports = {
                 ephemeral: true
             });
 
-            // Attente de la sélection du menu (limite de 2 minutes)
             const collectorFilter = i => i.user.id === interaction.user.id && i.customId === 'select_team1_members';
             
             try {
                 const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 120000 });
-                
                 const selectedUserIds = confirmation.values;
                 await confirmation.deferUpdate();
 
-                // Lance la suite avec les IDs choisis manuellement pour la Team 1
                 return await finalizeAndStartBattle(interaction, battle, team1Name, team2Name, viesInitiales, selectedUserIds);
 
             } catch (err) {
@@ -146,7 +138,6 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
             }
         });
     } else {
-        // Algorithme automatique basé sur le niveau[cite: 6]
         const sortedPlayers = registeredPlayers.sort((a, b) => b.level - a.level);
         let p1Lvl = 0; let p2Lvl = 0;
 
@@ -156,14 +147,164 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         }
     }
 
+    if (!team1.length || !team2.length) {
+        return interaction.editReply({
+            content: "❌ Chaque équipe doit contenir au moins un joueur pour démarrer la bataille.",
+            components: manualTeam1Ids ? [] : undefined
+        });
+    }
+
+    // --- DICTIONNAIRE / AJUSTEMENT DES VIES SI NOMBRE INÉGAL (LE JUGEMENT DE LA BALANCE) ---
+    let modificationsVies = {};
+
+    if (team1.length !== team2.length) {
+        const teamEnSousNombre = team1.length < team2.length ? team1 : team2;
+        const teamEnSurnombre = team1.length > team2.length ? team1 : team2;
+        const nomTeamSousNombre = team1.length < team2.length ? team1Name : team2Name;
+        const nomTeamSurnombre = team1.length > team2.length ? team1Name : team2Name;
+
+        const balanceEmbed = new EmbedBuilder()
+            .setTitle('⚖️ Le Jugement de la Balance - Déséquilibre Détecté')
+            .setDescription(
+                `Les effectifs sont inégaux (**${team1.length} vs ${team2.length}**).\n` +
+                `Le protocole du **Jugement de la Balance** est activé.`
+            )
+            .setColor('#ffd700')
+            .addFields(
+                { name: `⚖️ Sous-nombre (${nomTeamSousNombre})`, value: `Le joueur désigné recevra le complément de vies nécessaire pour s'égaliser avec l'adversaire.` },
+                { name: `⚖️ Surnombre (${nomTeamSurnombre})`, value: `Le joueur désigné perd **1 vie** (sanction).` }
+            );
+
+        async function getPlayerDisplayName(userId) {
+            try {
+                const member = await interaction.guild.members.fetch(userId);
+                return member.displayName || member.user.username;
+            } catch (e) {
+                return `Utilisateur (${userId})`;
+            }
+        }
+
+        const sanctionOptions = [];
+        for (const p of teamEnSurnombre) {
+            const name = await getPlayerDisplayName(p._id);
+            sanctionOptions.push({
+                label: `Retirer 1 vie à ${name}`.substring(0, 100),
+                value: p._id
+            });
+        }
+
+        const renfortOptions = [];
+        for (const p of teamEnSousNombre) {
+            const name = await getPlayerDisplayName(p._id);
+            renfortOptions.push({
+                label: `Donner le complément de vies à ${name}`.substring(0, 100),
+                value: p._id
+            });
+        }
+
+        const selectSanction = new StringSelectMenuBuilder()
+            .setCustomId('balance_sanction')
+            .setPlaceholder(`[${nomTeamSurnombre}] Choisir la cible -1 vie`)
+            .addOptions(sanctionOptions.slice(0, 25));
+
+        const selectRenfort = new StringSelectMenuBuilder()
+            .setCustomId('balance_renfort')
+            .setPlaceholder(`[${nomTeamSousNombre}] Choisir le bénéficiaire du complément`)
+            .addOptions(renfortOptions.slice(0, 25));
+
+        const btnValidate = new ButtonBuilder()
+            .setCustomId('validate_balance')
+            .setLabel('Valider Le Jugement')
+            .setStyle(ButtonStyle.Success);
+
+        const row1 = new ActionRowBuilder().addComponents(selectSanction);
+        const row2 = new ActionRowBuilder().addComponents(selectRenfort);
+        const row3 = new ActionRowBuilder().addComponents(btnValidate);
+
+        const balanceMsg = await interaction.followUp({
+            content: "⚠️ **Action requise :** Veuillez renseigner le Jugement de la Balance ci-dessous.",
+            embeds: [balanceEmbed],
+            components: [row1, row2, row3],
+            ephemeral: true,
+            fetchReply: true
+        });
+
+        try {
+            let selectedVictim = null;
+            let selectedBeneficiary = null;
+
+            const collector = balanceMsg.createMessageComponentCollector({ time: 300000 });
+
+            await new Promise((resolve, reject) => {
+                collector.on('collect', async i => {
+                    if (!i.member.permissions.has(PermissionFlagsBits.Administrator)) {
+                        return i.reply({ content: "❌ Seul un Administrateur/TO peut valider ce jugement.", ephemeral: true });
+                    }
+
+                    if (i.isStringSelectMenu()) {
+                        if (i.customId === 'balance_sanction') selectedVictim = i.values[0];
+                        if (i.customId === 'balance_renfort') selectedBeneficiary = i.values[0];
+                        await i.deferUpdate();
+                    } else if (i.customId === 'validate_balance') {
+                        if (!selectedVictim || !selectedBeneficiary) {
+                            return i.reply({ content: "⚠️ Veuillez sélectionner à la fois la cible de la sanction et le bénéficiaire du renfort.", ephemeral: true });
+                        }
+                        collector.stop('validated');
+                        await i.deferUpdate();
+                        resolve();
+                    }
+                });
+
+                collector.on('end', (collected, reason) => {
+                    if (reason !== 'validated') reject(new Error('Temps de vote de la balance expiré.'));
+                });
+            });
+
+            await balanceMsg.edit({ components: [] });
+
+            // 1. La victime perd 1 vie
+            if (selectedVictim) modificationsVies[selectedVictim] = -1;
+
+            // 2. Calcul dynamique du total de vies de l'équipe en surnombre après la sanction
+            let totalViesSurnombre = 0;
+            teamEnSurnombre.forEach(p => {
+                let v = viesInitiales;
+                if (p._id.toString() === selectedVictim) v -= 1;
+                totalViesSurnombre += v;
+            });
+
+            // 3. Calcul du total de vies actuel de l'équipe en sous-nombre (sans le bénéficiaire)
+            let totalViesSousNombreActuelles = 0;
+            teamEnSousNombre.forEach(p => {
+                if (p._id.toString() !== selectedBeneficiary) {
+                    totalViesSousNombreActuelles += viesInitiales;
+                }
+            });
+
+            // Le bénéficiaire doit combler l'écart pour que les deux équipes aient le même pool global
+            const viesNecessaires = totalViesSurnombre - totalViesSousNombreActuelles;
+            const bonusVies = viesNecessaires - viesInitiales; // Ce qu'on ajoute en plus de ses vies de base
+
+            if (selectedBeneficiary) {
+                modificationsVies[selectedBeneficiary] = bonusVies;
+            }
+
+        } catch (err) {
+            console.error(err);
+            await balanceMsg.edit({ components: [] });
+            return interaction.editReply({ content: "⏰ Temps écoulé ou erreur lors du Jugement de la Balance.", components: [] });
+        }
+    }
+    // --------------------------------------------------------------------------
+
     const p1Lvl = team1.reduce((acc, p) => acc + p.level, 0);
     const p2Lvl = team2.reduce((acc, p) => acc + p.level, 0);
 
-    // 1. CRÉATION DES RÔLES D'ÉQUIPE[cite: 6]
+    // 1. CRÉATION DES RÔLES D'ÉQUIPE
     const roleTeam1 = await getOrCreateTeamRole(interaction.guild, team1Name, '#3498db');
     const roleTeam2 = await getOrCreateTeamRole(interaction.guild, team2Name, '#e74c3c');
 
-    // 2. ASSIGNATION DES RÔLES[cite: 6]
+    // 2. ASSIGNATION DES RÔLES
     for (const p of team1) {
         const member = await interaction.guild.members.fetch(p._id).catch(() => null);
         if (member && roleTeam1) await member.roles.add(roleTeam1.id).catch(err => console.error(`Erreur rôle T1 (${p._id}):`, err));
@@ -173,7 +314,7 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         if (member && roleTeam2) await member.roles.add(roleTeam2.id).catch(err => console.error(`Erreur rôle T2 (${p._id}):`, err));
     }
 
-    // 3. PERMISSIONS DE BASE[cite: 6]
+    // 3. PERMISSIONS DE BASE
     const basePermissionOverwrites = [
         {
             id: interaction.guild.roles.everyone,
@@ -203,7 +344,7 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         }
     });
 
-    // 4. PERMISSIONS VOCALES ET TEXTUELLES[cite: 6]
+    // 4. PERMISSIONS VOCALES ET TEXTUELLES
     const teamPermissions = [
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.Connect,
@@ -219,7 +360,7 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         PermissionFlagsBits.AddReactions
     ];
 
-    // 5. CRÉATION DES SALONS VOCAUX[cite: 6]
+    // 5. CRÉATION DES SALONS VOCAUX
     let voice1Id = null;
     let voice2Id = null;
     const category = await interaction.guild.channels.fetch(categoryId).catch(() => null);
@@ -253,10 +394,19 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         }
     }
 
-    // 6. SAUVEGARDE[cite: 6]
+    // --- SAUVEGARDE AVEC PRISE EN COMPTE DU JUGEMENT DE LA BALANCE ---
     battle.status = 'started';
     battle.viesParJoueur = viesInitiales;
-    battle.presents.forEach(id => battle.viesActuelles.set(id.toString(), viesInitiales));
+
+    battle.presents.forEach(id => {
+        const strId = id.toString();
+        let viesFinalesDuJoueur = viesInitiales;
+        if (modificationsVies[strId]) {
+            viesFinalesDuJoueur += modificationsVies[strId]; // Applique +bonus ou -1
+        }
+        battle.viesActuelles.set(strId, viesFinalesDuJoueur);
+    });
+
     battle.teams = {
         team1: { name: team1Name, players: team1.map(p => p._id), totalLevel: p1Lvl, voiceChannelId: voice1Id },
         team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl, voiceChannelId: voice2Id }
@@ -265,24 +415,33 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
     await battle.save();
     await broadcastOverlayData();
 
+    // Affichage formaté des joueurs avec le symbole de la Balance si désigné
+    const formatTeamPlayersWithVies = (teamArray) => {
+        return teamArray.map(p => {
+            const strId = p._id.toString();
+            const v = battle.viesActuelles.get(strId);
+            const aSubitJugement = modificationsVies[strId] !== undefined;
+            const symboleJugement = aSubitJugement ? ' ⚖️' : '';
+
+            return `<@${p._id}> — **${v}** vies${symboleJugement}`;
+        }).join('\n');
+    };
+
     const runEmbed = new EmbedBuilder()
         .setTitle('🏛️ Les Camps de la Guerre Sainte sont scellés')
         .setDescription(
             `Répartition effectuée (${manualTeam1Ids ? 'Mode Manuel (Menu)' : 'Mode Automatique'}).\n\n` +
             `📜 **Chroniques du Sanctuaire**\n` +
-            `Chaque guerrier dispose de **${viesInitiales} éclats de Cosmos** (vies).`
+            `Base de départ : **${viesInitiales}** éclats de Cosmos par défaut.\n` +
+            (Object.keys(modificationsVies).length > 0 ? `⚖️ *Le Jugement de la Balance a été appliqué.*` : '')
         )
         .setColor('#3498db')
         .addFields(
-            { name: `🔵 Armée de ${team1Name}`, value: team1.length ? team1.map(p => `<@${p._id}>`).join('\n') : 'Aucun', inline: true },
-            { name: `🔴 Légion de ${team2Name}`, value: team2.length ? team2.map(p => `<@${p._id}>`).join('\n') : 'Aucun', inline: true }
+            { name: `🔵 Armée de ${team1Name}`, value: team1.length ? formatTeamPlayersWithVies(team1) : 'Aucun', inline: true },
+            { name: `🔴 Légion de ${team2Name}`, value: team2.length ? formatTeamPlayersWithVies(team2) : 'Aucun', inline: true }
         )
         .setFooter({ text: 'Rejoignez vos quartiers ! Utilisez /battle-toss pour le premier assaut.' })
         .setTimestamp();
 
-    if (manualTeam1Ids) {
-        return interaction.editReply({ content: null, embeds: [runEmbed], components: [] });
-    } else {
-        return interaction.editReply({ embeds: [runEmbed] });
-    }
+    return interaction.editReply({ content: null, embeds: [runEmbed], components: [] });
 }

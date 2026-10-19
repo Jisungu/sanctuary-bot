@@ -254,11 +254,17 @@
                 // 12 tours complets (4320deg) pour Team 1, +180deg (4500deg) pour Team 2
                 const finalRotation = isTeam1Winner ? 4320 : 4500; 
                 coin.style.setProperty('--final-rotation', `${finalRotation}deg`);
-                
                 coin.classList.add('flipping');
 
                 setTimeout(() => {
-                    resultText.innerHTML = `C'est l'équipe <span class="team-highlight">${designatedTeam}</span> qui doit envoyer son premier Chevalier dans l'arène`;
+                    const teamHighlight = document.createElement('span');
+                    teamHighlight.className = 'team-highlight';
+                    teamHighlight.textContent = designatedTeam;
+                    resultText.replaceChildren(
+                        "C'est l'équipe ",
+                        teamHighlight,
+                        " qui doit envoyer son premier Chevalier dans l'arène"
+                    );
                     resultCard.classList.add('show');
                 }, 3000);
 

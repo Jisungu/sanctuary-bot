@@ -484,11 +484,18 @@
     function createCardHTML(member) {
         const charName = (member.char || 'default').toLowerCase().replace(/\s+/g, '_');
         const imgSrc = `img/characters/${charName}.webp`;
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[character]);
         return `
             <div class="member-card ${member.isMvp ? 'is-mvp' : ''}">
                 ${member.isMvp ? '<div class="mvp-badge-tag">⭐ MVP</div>' : ''}
-                <img src="${imgSrc}" alt="${member.name}">
-                <div class="member-name">${member.name}</div>
+                <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(member.name)}">
+                <div class="member-name">${escapeHtml(member.name)}</div>
             </div>
         `;
     }

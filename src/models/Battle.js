@@ -13,6 +13,7 @@ const battleSchema = new mongoose.Schema({
     heureTournoi: String,
     
     participants: [String], 
+    waitlist: { type: [String], default: [] },
     presents: [String],
 
     teams: {

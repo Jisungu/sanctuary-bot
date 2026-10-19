@@ -33,7 +33,7 @@ module.exports = {
         }
 
         try {
-            const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+            const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
             if (!battle) {
                 return interaction.reply({ content: "⚠️ Aucune Guerre Sainte n'est active.", ephemeral: true });
             }

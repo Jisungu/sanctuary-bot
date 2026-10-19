@@ -21,7 +21,7 @@ module.exports = {
 
             // GESTION DU FILTRAGE DE P1 ET P2 SELON LEUR ÉQUIPE
             if (focusedOption.name === 'p1' || focusedOption.name === 'p2') {
-                const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+                const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
                 if (!battle) return interaction.respond([]);
 
                 const teamPlayerIds = focusedOption.name === 'p1' 
@@ -123,7 +123,7 @@ module.exports = {
         const char2Value = getTechValue(interaction.options.getString('char2'), characters);
 
         try {
-            const battle = await Battle.findOne({ status: 'started' }).sort({ createdAt: -1 });
+            const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
             if (!battle) return interaction.editReply("⚠️ Aucune Guerre Sainte en cours.");
 
             battle.currentMatch = {
