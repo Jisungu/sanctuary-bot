@@ -240,6 +240,18 @@
             transition: opacity 0.2s ease, transform 0.2s ease;
         }
 
+        .player-card.has-remaining-lives .player-name {
+            font-size: 1rem;
+        }
+
+        .player-name.balance-target::after {
+            content: " ⚖️";
+            color: #ffd700;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.9em;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.9);
+        }
+
         /* Classe temporaire pour le changement de nom */
         .player-name.name-changing {
             opacity: 0;
@@ -267,6 +279,16 @@
             gap: 6px;
         }
 
+        .remaining-lives {
+            color: #ffd700;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
         .heart {
             font-size: 1.4rem;
             filter: grayscale(100%) opacity(0.2);
@@ -277,6 +299,10 @@
         .heart.active {
             filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.9)) grayscale(0%);
             opacity: 1;
+        }
+
+        .heart.bonus-heart.active {
+            filter: drop-shadow(0 0 7px rgba(255, 215, 0, 0.95)) grayscale(0%);
         }
 
         /* --- ANIMATIONS PERTE / GAIN DE VIE --- */
@@ -493,8 +519,10 @@
     });
 
     // Helper dédié à l'animation isolée de player-name
-    function updatePlayerNameWithAnimation(element, newName) {
+    function updatePlayerNameWithAnimation(element, newName, isBalanceTarget) {
         if (!element) return;
+        element.title = isBalanceTarget ? 'Joueur désigné par le Jugement de la Balance' : '';
+        element.classList.toggle('balance-target', isBalanceTarget);
         const currentText = element.textContent.trim();
         const nextText = (newName || "").toString().trim();
 
@@ -538,16 +566,20 @@
     }
 
     // Rendu dynamique des cœurs avec animations
-    function renderHearts(container, currentLives, maxLives, playerId) {
+    function renderHearts(container, currentLives, maxLives, playerId, balanceAdjustment = 0) {
         const oldLives = previousLivesState[playerId] !== undefined ? previousLivesState[playerId] : currentLives;
         container.innerHTML = '';
 
-        for (let i = 0; i < maxLives; i++) {
+        const totalLifeSlots = Math.max(0, Number(maxLives) || 0)
+            + Math.max(0, Number(balanceAdjustment) || 0);
+        const visibleLifeSlots = Math.min(totalLifeSlots, 3);
+        for (let i = 0; i < visibleLifeSlots; i++) {
             const heartSpan = document.createElement('span');
             const isActive = i < currentLives;
+            const isBonusHeart = i >= maxLives;
             
-            heartSpan.className = isActive ? 'heart active' : 'heart';
-            heartSpan.textContent = '❤️';
+            heartSpan.className = `heart${isBonusHeart ? ' bonus-heart' : ''}${isActive ? ' active' : ''}`;
+            heartSpan.textContent = isBonusHeart ? '💛' : '❤️';
 
             if (i < oldLives && i >= currentLives) {
                 heartSpan.classList.add('anim-lost');
@@ -558,6 +590,19 @@
             }
 
             container.appendChild(heartSpan);
+        }
+
+        const remainingLives = Math.max(0, currentLives - visibleLifeSlots);
+        const playerCard = container.closest('.player-card');
+        if (playerCard) {
+            playerCard.classList.toggle('has-remaining-lives', remainingLives > 0);
+        }
+
+        if (remainingLives > 0) {
+            const remainingLivesLabel = document.createElement('span');
+            remainingLivesLabel.className = 'remaining-lives';
+            remainingLivesLabel.textContent = `+${remainingLives}`;
+            container.appendChild(remainingLivesLabel);
         }
 
         previousLivesState[playerId] = currentLives;
@@ -652,8 +697,8 @@
             
             if (data.p1) {
                 p1Card.classList.add('visible');
-                updatePlayerNameWithAnimation(p1Name, data.p1.name);
-                renderHearts(p1Lives, data.p1.lives, data.maxLives, data.p1.id || 'p1');
+                updatePlayerNameWithAnimation(p1Name, data.p1.name, data.p1.balanceTarget ?? (data.p1.balanceAdjustment ?? 0) !== 0);
+                renderHearts(p1Lives, data.p1.lives, data.maxLives, data.p1.id || 'p1', data.p1.balanceAdjustment || 0);
 
                 if (isPhoenixActive && previousP1Lives !== null && data.p1.lives > previousP1Lives) {
                     playResurrectionSound();
@@ -671,8 +716,8 @@
 
             if (data.p2) {
                 p2Card.classList.add('visible');
-                updatePlayerNameWithAnimation(p2Name, data.p2.name);
-                renderHearts(p2Lives, data.p2.lives, data.maxLives, data.p2.id || 'p2');
+                updatePlayerNameWithAnimation(p2Name, data.p2.name, data.p2.balanceTarget ?? (data.p2.balanceAdjustment ?? 0) !== 0);
+                renderHearts(p2Lives, data.p2.lives, data.maxLives, data.p2.id || 'p2', data.p2.balanceAdjustment || 0);
 
                 if (isPhoenixActive && previousP2Lives !== null && data.p2.lives > previousP2Lives) {
                     playResurrectionSound();

@@ -461,6 +461,14 @@
             text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
         }
 
+        .player-name.balance-target::after {
+            content: " ⚖️";
+            color: #ffd700;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 0.9em;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.9);
+        }
+
         .player-lives-container {
             display: flex;
             flex-direction: column;
@@ -485,6 +493,16 @@
             align-items: center;
         }
 
+        .remaining-lives {
+            color: #ffd700;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 800;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+            white-space: nowrap;
+            margin-left: 5px;
+        }
+
         .heart {
             font-size: 1.25rem;
             filter: grayscale(100%) opacity(0.25);
@@ -500,6 +518,10 @@
             filter: drop-shadow(0 0 6px rgba(255, 50, 50, 0.9)) grayscale(0%);
             opacity: 1;
             transform: scale(1.05);
+        }
+
+        .heart.bonus-heart.active {
+            filter: drop-shadow(0 0 7px rgba(255, 215, 0, 0.95)) grayscale(0%);
         }
 
         .bottom-decor-bar {
@@ -640,13 +662,25 @@
     </script>
     <script>
     // Rendu dynamique des cœurs de vie
-    function renderHearts(container, currentLives, maxLives) {
+    function renderHearts(container, currentLives, maxLives, balanceAdjustment = 0) {
         container.innerHTML = '';
-        for (let i = 0; i < maxLives; i++) {
+        const totalLifeSlots = Math.max(0, Number(maxLives) || 0)
+            + Math.max(0, Number(balanceAdjustment) || 0);
+        const visibleLifeSlots = Math.min(totalLifeSlots, 3);
+        for (let i = 0; i < visibleLifeSlots; i++) {
             const heartSpan = document.createElement('span');
-            heartSpan.className = i < currentLives ? 'heart active' : 'heart';
-            heartSpan.textContent = '❤️';
+            const isBonusHeart = i >= maxLives;
+            heartSpan.className = `heart${isBonusHeart ? ' bonus-heart' : ''}${i < currentLives ? ' active' : ''}`;
+            heartSpan.textContent = isBonusHeart ? '💛' : '❤️';
             container.appendChild(heartSpan);
+        }
+
+        const remainingLives = Math.max(0, currentLives - visibleLifeSlots);
+        if (remainingLives > 0) {
+            const remainingLivesLabel = document.createElement('span');
+            remainingLivesLabel.className = 'remaining-lives';
+            remainingLivesLabel.textContent = `+${remainingLives}`;
+            container.appendChild(remainingLivesLabel);
         }
     }
 
@@ -667,7 +701,13 @@
 
             const playerName = document.createElement('span');
             playerName.className = 'player-name';
+            const balanceAdjustment = player.balanceAdjustment ?? Math.max(0, player.lives - maxLives);
+            const isBalanceTarget = player.balanceTarget ?? (balanceAdjustment !== 0);
             playerName.textContent = player.name;
+            playerName.classList.toggle('balance-target', isBalanceTarget);
+            if (isBalanceTarget) {
+                playerName.title = 'Joueur désigné par le Jugement de la Balance';
+            }
 
             playerInfo.appendChild(roleTag);
             playerInfo.appendChild(playerName);
@@ -681,7 +721,7 @@
 
             const livesDiv = document.createElement('div');
             livesDiv.className = 'player-lives';
-            renderHearts(livesDiv, player.lives, maxLives);
+            renderHearts(livesDiv, player.lives, maxLives, Math.max(0, balanceAdjustment));
 
             livesContainer.appendChild(livesLabel);
             livesContainer.appendChild(livesDiv);

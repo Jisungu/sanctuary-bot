@@ -156,6 +156,7 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
 
     // --- DICTIONNAIRE / AJUSTEMENT DES VIES SI NOMBRE INÉGAL (LE JUGEMENT DE LA BALANCE) ---
     let modificationsVies = {};
+    let balanceTargets = [];
 
     if (team1.length !== team2.length) {
         const teamEnSousNombre = team1.length < team2.length ? team1 : team2;
@@ -288,6 +289,8 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
             if (selectedBeneficiary) {
                 modificationsVies[selectedBeneficiary] = bonusVies;
             }
+            balanceTargets = [selectedVictim];
+            if (bonusVies > 0) balanceTargets.push(selectedBeneficiary);
 
         } catch (err) {
             console.error(err);
@@ -397,6 +400,11 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
     // --- SAUVEGARDE AVEC PRISE EN COMPTE DU JUGEMENT DE LA BALANCE ---
     battle.status = 'started';
     battle.viesParJoueur = viesInitiales;
+    battle.balanceAdjustments.clear();
+    Object.entries(modificationsVies).forEach(([playerId, adjustment]) => {
+        battle.balanceAdjustments.set(playerId, adjustment);
+    });
+    battle.balanceTargets = balanceTargets;
 
     battle.presents.forEach(id => {
         const strId = id.toString();
@@ -412,6 +420,8 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
         team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl, voiceChannelId: voice2Id }
     };
     battle.markModified('viesActuelles');
+    battle.markModified('balanceAdjustments');
+    battle.markModified('balanceTargets');
     await battle.save();
     await broadcastOverlayData();
 

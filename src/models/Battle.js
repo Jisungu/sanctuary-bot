@@ -46,6 +46,12 @@ const battleSchema = new mongoose.Schema({
         of: Number,
         default: {}
     },
+    balanceAdjustments: {
+        type: Map,
+        of: Number,
+        default: {}
+    },
+    balanceTargets: { type: [String], default: [] },
 
     history: [{
         p1_id: String,

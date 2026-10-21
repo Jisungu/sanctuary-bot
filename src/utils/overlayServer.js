@@ -42,13 +42,19 @@ async function broadcastOverlayData() {
             for (const pId of team.players) {
                 const idStr = pId.toString();
                 const lives = battle.viesActuelles.get(idStr) ?? 0;
+                const balanceAdjustment = battle.balanceAdjustments?.get(idStr);
+                const balanceTarget = battle.balanceTargets?.includes(idStr)
+                    || (balanceAdjustment !== undefined && balanceAdjustment !== 0)
+                    || (balanceAdjustment === undefined && lives > (battle.viesParJoueur ?? 0));
                 totalScore += lives;
 
                 const playerDoc = await Player.findById(pId);
                 playersList.push({
                     id: idStr,
                     name: playerDoc ? playerDoc.username : "Joueur",
-                    lives: lives
+                    lives,
+                    balanceAdjustment: balanceAdjustment ?? Math.max(0, lives - (battle.viesParJoueur ?? 0)),
+                    balanceTarget
                 });
             }
 
@@ -76,17 +82,29 @@ async function broadcastOverlayData() {
             const p2Player = await Player.findById(p2Id);
 
             if (p1Player && p2Player) {
+                const p1Lives = battle.viesActuelles.get(p1Player.id.toString()) ?? 0;
+                const p2Lives = battle.viesActuelles.get(p2Player.id.toString()) ?? 0;
+                const p1Adjustment = battle.balanceAdjustments?.get(p1Player.id.toString());
+                const p2Adjustment = battle.balanceAdjustments?.get(p2Player.id.toString());
                 rawP1Data = {
                     id: p1Player.id,
                     name: p1Player.username,
-                    lives: battle.viesActuelles.get(p1Player.id.toString()) ?? 0,
+                    lives: p1Lives,
+                    balanceAdjustment: p1Adjustment ?? Math.max(0, p1Lives - (battle.viesParJoueur ?? 0)),
+                    balanceTarget: battle.balanceTargets?.includes(p1Player.id.toString())
+                        || (p1Adjustment !== undefined && p1Adjustment !== 0)
+                        || (p1Adjustment === undefined && p1Lives > (battle.viesParJoueur ?? 0)),
                     char: battle.currentMatch?.char1 || null
                 };
 
                 rawP2Data = {
                     id: p2Player.id,
                     name: p2Player.username,
-                    lives: battle.viesActuelles.get(p2Player.id.toString()) ?? 0,
+                    lives: p2Lives,
+                    balanceAdjustment: p2Adjustment ?? Math.max(0, p2Lives - (battle.viesParJoueur ?? 0)),
+                    balanceTarget: battle.balanceTargets?.includes(p2Player.id.toString())
+                        || (p2Adjustment !== undefined && p2Adjustment !== 0)
+                        || (p2Adjustment === undefined && p2Lives > (battle.viesParJoueur ?? 0)),
                     char: battle.currentMatch?.char2 || null
                 };
             }
