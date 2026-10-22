@@ -13,7 +13,8 @@ module.exports = {
         // 1. Recherche du sondage d'inscription en cours
         const battle = await Battle.findOne({ 
             guildId: interaction.guildId, 
-            status: 'registration' 
+            status: 'registration',
+            isDirect: { $ne: true }
         }).sort({ createdAt: -1 });
 
         if (!battle || !battle.participants || battle.participants.length < 1) {

@@ -145,7 +145,8 @@ client.on('interactionCreate', async interaction => {
             try {
                 const activeBattle = await Battle.findOne({ 
                     guildId,
-                    status: { $in: ['registration', 'calling'] } 
+                    status: { $in: ['registration', 'calling'] },
+                    isDirect: { $ne: true }
                 }).sort({ createdAt: -1 });
 
                 if (!activeBattle) return interaction.deferUpdate();

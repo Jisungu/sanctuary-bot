@@ -5,6 +5,8 @@ const { broadcastOverlayData } = require('../utils/overlayServer');
 
 require('dotenv').config();
 
+const startingGuilds = new Set();
+
 async function getOrCreateTeamRole(guild, teamName, color) {
     const roles = await guild.roles.fetch();
     let role = roles.find(r => r.name.toLowerCase() === teamName.toLowerCase());
@@ -43,7 +45,11 @@ module.exports = {
         const isManual = interaction.options.getBoolean('manuel') || false;
 
         try {
-            const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'calling' }).sort({ createdAt: -1 });
+            const battle = await Battle.findOne({
+                guildId: interaction.guildId,
+                status: 'calling',
+                isDirect: { $ne: true }
+            }).sort({ createdAt: -1 });
 
             if (!battle) return interaction.reply({ content: "⚠️ Aucune phase d'appel n'est active.", ephemeral: true });
 
@@ -56,6 +62,13 @@ module.exports = {
                 return interaction.reply({ 
                     content: `❌ **Interruption !** Les chevaliers suivants n'ont pas de rang défini :\n${missingPlayers.join(', ')}`, 
                     ephemeral: true 
+                });
+            }
+
+            if (registeredPlayers.length < 2) {
+                return interaction.reply({
+                    content: '❌ Il faut au moins deux chevaliers présents pour former deux équipes.',
+                    ephemeral: true
                 });
             }
 
@@ -86,7 +99,7 @@ module.exports = {
                 .setCustomId('select_team1_members')
                 .setPlaceholder('Sélectionnez les membres de la Team 1')
                 .setMinValues(1)
-                .setMaxValues(Math.min(options.length, 25))
+                .setMaxValues(Math.min(options.length - 1, 25))
                 .addOptions(options.slice(0, 25));
 
             const row = new ActionRowBuilder().addComponents(selectMenu);
@@ -123,6 +136,29 @@ module.exports = {
 
 // Fonction mutualisée pour créer les rôles, les salons et lancer la bataille
 async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name, viesInitiales, manualTeam1Ids) {
+    const guildId = interaction.guildId;
+    if (startingGuilds.has(guildId)) {
+        return interaction.editReply("⚠️ Une autre Team Battle est déjà en cours de lancement.");
+    }
+
+    startingGuilds.add(guildId);
+    try {
+        const startedBattle = await Battle.findOne({
+            guildId,
+            status: 'started',
+            _id: { $ne: battle._id }
+        });
+        if (startedBattle) {
+            return interaction.editReply("⚠️ Une Team Battle est déjà lancée. Termine-la avant d'en démarrer une autre.");
+        }
+
+        return await finalizeBattle(interaction, battle, team1Name, team2Name, viesInitiales, manualTeam1Ids);
+    } finally {
+        startingGuilds.delete(guildId);
+    }
+}
+
+async function finalizeBattle(interaction, battle, team1Name, team2Name, viesInitiales, manualTeam1Ids) {
     const registeredPlayers = await Player.find({ _id: { $in: battle.presents } });
     const categoryId = process.env.CATEGORY_VOCAL_ID;
 
@@ -455,3 +491,5 @@ async function finalizeAndStartBattle(interaction, battle, team1Name, team2Name,
 
     return interaction.editReply({ content: null, embeds: [runEmbed], components: [] });
 }
+
+module.exports.finalizeAndStartBattle = finalizeAndStartBattle;

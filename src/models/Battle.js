@@ -9,6 +9,7 @@ const battleSchema = new mongoose.Schema({
         enum: ['registration', 'calling', 'started', 'finished'], 
         default: 'registration' 
     },
+    isDirect: { type: Boolean, default: false },
     dateTournoi: String,
     heureTournoi: String,
     
@@ -66,5 +67,14 @@ const battleSchema = new mongoose.Schema({
     }],
     phoenixUsed: { type: Boolean, default: false }
 }, { timestamps: true });
+
+battleSchema.index(
+    { guildId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { status: 'started' },
+        name: 'one_started_battle_per_guild'
+    }
+);
 
 module.exports = mongoose.model('Battle', battleSchema);

@@ -31,7 +31,8 @@ module.exports = {
     async execute(interaction) {
         const battle = await Battle.findOne({ 
             guildId: interaction.guildId, 
-            status: { $in: ['registration', 'calling'] } 
+            status: { $in: ['registration', 'calling'] },
+            isDirect: { $ne: true }
         }).sort({ createdAt: -1 });
 
         if (!battle) {
