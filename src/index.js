@@ -12,6 +12,7 @@ const Battle = require('./models/Battle');
 const Player = require('./models/Player');
 const { initWebSocket, broadcastOverlayData } = require('./utils/overlayServer');
 const { addPlayers, removePlayers, getBattleFields } = require('./utils/battleRegistration');
+const { handlePhoenixRequestInteraction } = require('./utils/phoenixRequests');
 const {
     buildBattleStatusEmbed,
     buildKnockoutEmbed,
@@ -71,6 +72,7 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.GuildMembers,
         GatewayIntentBits.MessageContent
     ]
 });
@@ -113,6 +115,8 @@ async function getOrCreateTBRole(guild) {
 // 4. GESTION DES INTERACTIONS (Slash Commands, Autocomplete, Boutons)
 client.on('interactionCreate', async interaction => {
     try {
+    if (await handlePhoenixRequestInteraction(interaction)) return;
+
     if (interaction.isAutocomplete()) {
         const command = client.commands.get(interaction.commandName);
         if (command) await command.autocomplete(interaction);

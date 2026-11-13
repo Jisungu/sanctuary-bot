@@ -22,12 +22,14 @@ const battleSchema = new mongoose.Schema({
             name: String,
             players: [String],
             totalLevel: Number,
+            roleId: String,
             voiceChannelId: String // ID du vocal Team 1
         },
         team2: {
             name: String,
             players: [String],
             totalLevel: Number,
+            roleId: String,
             voiceChannelId: String // ID du vocal Team 2
         }
     },

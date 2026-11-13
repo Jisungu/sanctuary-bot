@@ -650,3 +650,4 @@ async function postToBattleChannel(client, battle, purpose, message) {
 }
 
 module.exports = registerControlPanelRoutes;
+module.exports.getConfiguredChannelId = getConfiguredChannelId;

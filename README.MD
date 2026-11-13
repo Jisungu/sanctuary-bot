@@ -32,8 +32,10 @@ Le bot agit comme l'arbitre central des rencontres compétitives :
 
 1. **Cloner le projet** : `git clone https://github.com/Jisungu/sanctuary-bot.git`
 2. **Installation** : `npm install`
-3. **Variables d'environnement** : Configurer un fichier `.env` avec `TOKEN`, `CLIENT_ID`, `MONGODB_URI`, `CONTROL_PANEL_TOKEN` (un jeton secret long et aléatoire) et `CONTROL_PANEL_CHANNELS`.
+3. **Variables d'environnement** : Configurer un fichier `.env` avec `TOKEN`, `CLIENT_ID`, `MONGODB_URI`, `CONTROL_PANEL_TOKEN` (un jeton secret long et aléatoire), `CONTROL_PANEL_CHANNELS` et `PHOENIX_NOTIFY_USER_ID` (l'ID Discord de l'organisateur).
 4. **Lancement** : `node index.js`
+
+Dans le portail Discord Developer, activez aussi **Server Members Intent** (Bot → Privileged Gateway Intents). Le bot en a besoin pour retirer le rôle `TeamBattle` à tous ses membres.
 
 ## 🎛️ Panneau de contrôle
 
@@ -50,6 +52,18 @@ CONTROL_PANEL_CHANNELS='{"ID_SERVEUR":{"registration":"ID_SALON_INSCRIPTIONS","c
 ```
 
 Le panneau utilise le salon `registration` pour créer les inscriptions, `checkin` pour le pointage et `battle` pour les autres commandes et annonces. Les messages existants sont édités dans leur salon d'origine. Le bot doit avoir accès à ces salons ainsi que les permissions requises par chaque commande.
+
+Au lancement d'une Team Battle, le bot publie `public/img/rules.png` et un bouton de demande du Phénix dans la discussion de chaque salon vocal. Le joueur choisit d'abord un membre éliminé de son équipe, puis un adversaire. La demande est transmise dans un fil privé du salon `battle`; le duel doit ensuite être validé et lancé par un administrateur avec `/battle-phoenix`.
+
+Configurez l'organisateur à notifier :
+
+```env
+PHOENIX_NOTIFY_USER_ID=ID_DISCORD_DE_L_ORGANISATEUR
+```
+
+Le bot doit disposer des permissions `CreatePrivateThreads`, `SendMessagesInThreads` et `ManageThreads` dans le salon `battle`. L'organisateur doit avoir accès à ce salon. Les administrateurs disposant de la permission de gérer les fils peuvent également voir les fils privés.
+
+La commande administrateur `/battle-clean` supprime les salons vocaux et les rôles d'équipe des Team Battles terminées, puis retire le rôle `TeamBattle` à ses membres. Elle refuse de s'exécuter tant qu'une bataille est en cours. Le bot doit avoir `ManageChannels` et `ManageRoles`, et son rôle le plus élevé doit être placé au-dessus des rôles à supprimer ou retirer.
 
 ---
 *Projet développé pour optimiser les performances et l'organisation des Team Battles de la structure **KTB**.*

@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType, Act
 const Player = require('../models/Player');
 const Battle = require('../models/Battle');
 const { broadcastOverlayData } = require('../utils/overlayServer');
+const path = require('node:path');
 
 require('dotenv').config();
 
@@ -371,6 +372,19 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
         });
     }
 
+    if (interaction.client.user?.id) {
+        basePermissionOverwrites.push({
+            id: interaction.client.user.id,
+            allow: [
+                PermissionFlagsBits.ViewChannel,
+                PermissionFlagsBits.SendMessages,
+                PermissionFlagsBits.ReadMessageHistory,
+                PermissionFlagsBits.EmbedLinks,
+                PermissionFlagsBits.AttachFiles
+            ]
+        });
+    }
+
     const staffRoleNames = ['Admin', 'TO', 'Sanctuaire'];
     const allRoles = await interaction.guild.roles.fetch();
 
@@ -416,6 +430,7 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
                     { id: roleTeam1.id, allow: teamPermissions }
                 ]
             });
+            voice1Id = chan1.id;
 
             const chan2 = await interaction.guild.channels.create({
                 name: `🔱 ${team2Name.toUpperCase()}`,
@@ -426,8 +441,6 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
                     { id: roleTeam2.id, allow: teamPermissions }
                 ]
             });
-
-            voice1Id = chan1.id;
             voice2Id = chan2.id;
         } catch (e) { 
             console.error("Erreur création salons vocaux :", e); 
@@ -455,14 +468,47 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
     });
 
     battle.teams = {
-        team1: { name: team1Name, players: team1.map(p => p._id), totalLevel: p1Lvl, voiceChannelId: voice1Id },
-        team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl, voiceChannelId: voice2Id }
+        team1: { name: team1Name, players: team1.map(p => p._id), totalLevel: p1Lvl, roleId: roleTeam1.id, voiceChannelId: voice1Id },
+        team2: { name: team2Name, players: team2.map(p => p._id), totalLevel: p2Lvl, roleId: roleTeam2.id, voiceChannelId: voice2Id }
     };
     battle.markModified('viesActuelles');
     battle.markModified('balanceAdjustments');
     battle.markModified('balanceTargets');
     await battle.save();
     await broadcastOverlayData();
+
+    const rulesNotificationFailures = [];
+    const rulesImagePath = path.join(__dirname, '..', '..', 'public', 'img', 'rules.png');
+    for (const [teamName, voiceChannelId] of [
+        [team1Name, voice1Id],
+        [team2Name, voice2Id]
+    ]) {
+        if (!voiceChannelId) {
+            rulesNotificationFailures.push(teamName);
+            continue;
+        }
+
+        try {
+            const voiceChannel = await interaction.guild.channels.fetch(voiceChannelId);
+            if (!voiceChannel || typeof voiceChannel.send !== 'function') {
+                throw new Error(`Le salon vocal de ${teamName} ne permet pas l’envoi de messages.`);
+            }
+            const phoenixButton = new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId('request_phoenix')
+                    .setLabel('Résurrection du Phoenix')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+            await voiceChannel.send({
+                content: `📜 Consultez les règles ci-jointes. Pour demander un duel du Phoenix, cliquez sur le bouton "Résurrection du Phoenix". Ensuite, sélectionnez le joueur à envoyer puis son adversaire.`,
+                files: [rulesImagePath],
+                components: [phoenixButton]
+            });
+        } catch (error) {
+            console.error(`Impossible de publier les règles dans le salon vocal de ${teamName} :`, error);
+            rulesNotificationFailures.push(teamName);
+        }
+    }
 
     // Affichage formaté des joueurs avec le symbole de la Balance si désigné
     const formatTeamPlayersWithVies = (teamArray) => {
@@ -482,7 +528,10 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
             `Répartition effectuée (${manualTeam1Ids ? 'Mode Manuel (Menu)' : 'Mode Automatique'}).\n\n` +
             `📜 **Chroniques du Sanctuaire**\n` +
             `Base de départ : **${viesInitiales}** éclats de Cosmos par défaut.\n` +
-            (Object.keys(modificationsVies).length > 0 ? `⚖️ *Le Jugement de la Balance a été appliqué.*` : '')
+            (Object.keys(modificationsVies).length > 0 ? `⚖️ *Le Jugement de la Balance a été appliqué.*` : '') +
+            (rulesNotificationFailures.length
+                ? `\n\n⚠️ Les règles et le bouton Phoenix n’ont pas pu être publiés dans : **${rulesNotificationFailures.join(', ')}**. Vérifiez les permissions du bot et la création des salons vocaux.`
+                : '')
         )
         .setColor('#3498db')
         .addFields(
