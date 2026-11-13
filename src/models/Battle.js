@@ -33,12 +33,16 @@ const battleSchema = new mongoose.Schema({
     },
 
     currentMatch: {
-        p1: String,
-        p2: String,
-        char1: String, 
-        char2: String, 
-        stage: String ,
-        isPhoenix: { type: Boolean, default: false },
+        type: new mongoose.Schema({
+            p1: String,
+            p2: String,
+            char1: String,
+            char2: String,
+            stage: String,
+            isPhoenix: { type: Boolean, default: false },
+            phoenixTeam: { type: String, enum: ['team1', 'team2'] },
+        }, { _id: false }),
+        default: null
     },
 
     viesParJoueur: Number,
@@ -63,8 +67,12 @@ const battleSchema = new mongoose.Schema({
         loserChar: String,
         stage: String,
         isPhoenix: { type: Boolean, default: false },
+        phoenixTeam: { type: String, enum: ['team1', 'team2'] },
+        p1LivesBefore: Number,
+        p2LivesBefore: Number,
         timestamp: { type: Date, default: Date.now }
     }],
+    phoenixUsedTeams: { type: [String], default: [] },
     phoenixUsed: { type: Boolean, default: false }
 }, { timestamps: true });
 

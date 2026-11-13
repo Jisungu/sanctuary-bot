@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('disc
 const Battle = require('../models/Battle');
 const { characters, stages } = require('../utils/data');
 const { broadcastOverlayData } = require('../utils/overlayServer');
+const { undoPhoenixMatch } = require('../utils/phoenix');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -15,7 +16,7 @@ module.exports = {
         try {
             const battle = await Battle.findOne({ 
                 guildId: interaction.guildId, 
-                status: 'started' 
+                status: { $in: ['started', 'finished'] }
             }).sort({ createdAt: -1 });
 
             if (!battle) {
@@ -36,8 +37,8 @@ module.exports = {
                 .setTimestamp();
 
             if (lastMatch.isPhoenix === true) {
-                battle.viesActuelles.set(winnerId, 0);
-                battle.phoenixUsed = false;
+                undoPhoenixMatch(battle, lastMatch);
+                const phoenixTeamName = battle.teams[lastMatch.phoenixTeam]?.name || 'l’équipe initiatrice';
                 undoEmbed.setDescription(`**Le miracle du Phoenix a été révoqué par décret divin !**`)
                     .addFields(
                         { 
@@ -46,7 +47,7 @@ module.exports = {
                         },
                         {
                             name: '🔮 Statut des Vies',
-                            value: `<@${winnerId}> perd sa jauge salvatrice et retourne à **0 vie (🖤)**. La règle du Phoenix est de nouveau disponible !`
+                            value: `<@${winnerId}> retrouve son nombre de vies d’avant le duel. L’équipe **${phoenixTeamName}** récupère son droit au duel du Phénix.`
                         }
                     )
                     .setFooter({ text: 'Les Enfers se referment. Utilisez /battle-phoenix si vous devez relancer ce duel.' });
@@ -54,6 +55,15 @@ module.exports = {
                 const currentLives = battle.viesActuelles.get(loserId) ?? 0;
                 const restoredLives = Math.min(battle.viesParJoueur, currentLives + 1);
                 battle.viesActuelles.set(loserId, restoredLives);
+
+                const winnerUpdates = { 'stats.wins': -1 };
+                const loserUpdates = { 'stats.losses': -1 };
+                if (lastMatch.winnerChar) winnerUpdates[`stats.charactersPlayed.${lastMatch.winnerChar}`] = -1;
+                if (lastMatch.loserChar) loserUpdates[`stats.charactersPlayed.${lastMatch.loserChar}`] = -1;
+                await Promise.all([
+                    Player.findByIdAndUpdate(winnerId, { $inc: winnerUpdates }),
+                    Player.findByIdAndUpdate(loserId, { $inc: loserUpdates })
+                ]);
 
                 const charWinLabel = characters.find(c => c.value === lastMatch.winnerChar)?.label || lastMatch.winnerChar;
                 const charLosLabel = characters.find(c => c.value === lastMatch.loserChar)?.label || lastMatch.loserChar;
@@ -72,6 +82,7 @@ module.exports = {
                     .setFooter({ text: 'Le cours du temps a repris. Utilisez /battle-toss pour relancer un assaut.' });
             }
 
+            battle.status = 'started';
             battle.currentMatch = undefined;
             battle.markModified('viesActuelles');
             battle.markModified('history');

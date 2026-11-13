@@ -32,8 +32,24 @@ Le bot agit comme l'arbitre central des rencontres compétitives :
 
 1. **Cloner le projet** : `git clone https://github.com/Jisungu/sanctuary-bot.git`
 2. **Installation** : `npm install`
-3. **Variables d'environnement** : Configurer un fichier `.env` avec `TOKEN`, `CLIENT_ID`, et `MONGODB_URI`.
+3. **Variables d'environnement** : Configurer un fichier `.env` avec `TOKEN`, `CLIENT_ID`, `MONGODB_URI`, `CONTROL_PANEL_TOKEN` (un jeton secret long et aléatoire) et `CONTROL_PANEL_CHANNELS`.
 4. **Lancement** : `node index.js`
+
+## 🎛️ Panneau de contrôle
+
+Le panneau de pilotage est disponible à l'adresse `/control-panel` du serveur. Son parcours principal suit les étapes de la Team Battle : inscriptions, appel, matchs et fin. Pendant les inscriptions, les joueurs peuvent être recherchés dans la base du bot puis ajoutés ou retirés directement. Pendant l’appel, un administrateur peut aussi marquer individuellement un inscrit présent ou absent depuis le panneau. Les commandes ponctuelles restent accessibles dans la section « Autres commandes du bot » ; les menus et boutons interactifs doivent ensuite être terminés dans Discord. Après chaque résultat de match, le bot publie aussi l'embed récapitulatif des vies.
+
+Chaque équipe dispose d’un duel du Phénix. L’équipe qui a moins de vies que l’adversaire et au moins un joueur éliminé peut le lancer : elle choisit d’abord son joueur éliminé, puis n’importe quel adversaire de l’autre équipe. Seule l’équipe initiatrice consomme son droit. Si son joueur gagne, il revient avec une vie; un adversaire vivant perd une vie, tandis qu’un adversaire éliminé le reste. Si le joueur initiateur perd, il ne revient pas; un adversaire vivant conserve ses vies, tandis qu’un adversaire éliminé revient avec une vie sans consommer le droit de son équipe.
+
+Les actions sont protégées par `CONTROL_PANEL_TOKEN`. Configurez cette variable dans l'environnement du serveur (par exemple dans les variables d'environnement Render), gardez-la secrète et saisissez sa valeur à l'ouverture du panneau. Sans cette variable, l'API du panneau reste désactivée.
+
+`CONTROL_PANEL_CHANNELS` associe chaque serveur Discord aux salons utilisés pour les messages du panneau. Ajoutez les IDs réels dans `.env` :
+
+```env
+CONTROL_PANEL_CHANNELS='{"ID_SERVEUR":{"registration":"ID_SALON_INSCRIPTIONS","checkin":"ID_SALON_CHECKIN","battle":"ID_SALON_DEROULEMENT"}}'
+```
+
+Le panneau utilise le salon `registration` pour créer les inscriptions, `checkin` pour le pointage et `battle` pour les autres commandes et annonces. Les messages existants sont édités dans leur salon d'origine. Le bot doit avoir accès à ces salons ainsi que les permissions requises par chaque commande.
 
 ---
 *Projet développé pour optimiser les performances et l'organisation des Team Battles de la structure **KTB**.*

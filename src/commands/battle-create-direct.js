@@ -121,8 +121,8 @@ module.exports = {
         let selection;
         try {
             selection = await menuMessage.awaitMessageComponent({
-                filter: component => component.user.id === interaction.user.id
-                    && component.customId === 'direct_battle_team1',
+                filter: component => component.customId === 'direct_battle_team1'
+                    && (component.user.id === interaction.user.id || component.memberPermissions?.has(PermissionFlagsBits.Administrator)),
                 time: 120000
             });
         } catch (error) {

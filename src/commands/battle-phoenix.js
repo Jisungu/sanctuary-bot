@@ -1,36 +1,34 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, PermissionFlagsBits } = require('discord.js');
 const Battle = require('../models/Battle');
-const { characters } = require('../utils/data'); 
+const { characters } = require('../utils/data');
 const { broadcastOverlayData, toggleSwapSides } = require('../utils/overlayServer');
+const { getPhoenixLaunchError } = require('../utils/phoenix');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('battle-phoenix')
-        .setDescription('Déclare le duel de résurrection du Phoenix entre deux Chevaliers éliminés.')
-        .addUserOption(option => option.setName('p1').setDescription('Chevalier Éliminé de l’Équipe 1').setRequired(true))
-        .addStringOption(option => option.setName('char1').setDescription('Personnage de P1').setRequired(true).setAutocomplete(true))
-        .addUserOption(option => option.setName('p2').setDescription('Chevalier Éliminé de l’Équipe 2').setRequired(true))
-        .addStringOption(option => option.setName('char2').setDescription('Personnage de P2').setRequired(true).setAutocomplete(true))
+        .setDescription('Déclare le duel du Phénix d’une équipe en retard contre un adversaire.')
+        .addStringOption(option => option.setName('equipe')
+            .setDescription('Équipe qui déclenche le duel')
+            .setRequired(true)
+            .addChoices(
+                { name: 'Équipe 1', value: 'team1' },
+                { name: 'Équipe 2', value: 'team2' }
+            ))
+        .addUserOption(option => option.setName('joueur').setDescription('Joueur éliminé à ressusciter dans l’équipe choisie').setRequired(true))
+        .addUserOption(option => option.setName('adversaire').setDescription('Adversaire de l’équipe opposée (éliminé ou en lice)').setRequired(true))
+        .addStringOption(option => option.setName('personnage_joueur').setDescription('Personnage du joueur à ressusciter').setRequired(true).setAutocomplete(true))
+        .addStringOption(option => option.setName('personnage_adversaire').setDescription('Personnage de l’adversaire').setRequired(true).setAutocomplete(true))
         .addBooleanOption(option => option.setName('swap').setDescription('Inverser l\'affichage de l\'overlay ?').setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
     async execute(interaction) {
-        // Exécution du swap si l'option est activée
         const shouldSwap = interaction.options.getBoolean('swap');
-        let swapStatusText = '';
-        if (shouldSwap) {
-            const isSwapped = toggleSwapSides();
-            swapStatusText = `\n\n🔄 *Overlay inversé : ${isSwapped ? 'Équipe 2 à gauche' : 'Équipe 1 à gauche'}*`;
-        }
-
-        const p1 = interaction.options.getUser('p1');
-        const char1 = interaction.options.getString('char1');
-        const p2 = interaction.options.getUser('p2');
-        const char2 = interaction.options.getString('char2');
-
-        if (p1.id === p2.id) {
-            return interaction.reply({ content: "❌ Un Chevalier ne peut pas s'affronter lui-même !", ephemeral: true });
-        }
+        const phoenixTeam = interaction.options.getString('equipe');
+        const phoenixPlayer = interaction.options.getUser('joueur');
+        const opponent = interaction.options.getUser('adversaire');
+        const phoenixChar = interaction.options.getString('personnage_joueur');
+        const opponentChar = interaction.options.getString('personnage_adversaire');
 
         try {
             const battle = await Battle.findOne({ guildId: interaction.guildId, status: 'started' }).sort({ createdAt: -1 });
@@ -38,20 +36,30 @@ module.exports = {
                 return interaction.reply({ content: "⚠️ Aucune Guerre Sainte n'est active.", ephemeral: true });
             }
 
-            const p1Lives = battle.viesActuelles.get(p1.id.toString()) ?? 0;
-            const p2Lives = battle.viesActuelles.get(p2.id.toString()) ?? 0;
-
-            if (p1Lives > 0 || p2Lives > 0) {
-                return interaction.reply({ content: "❌ Le duel du Phoenix ne peut opposer que des Chevaliers éliminés (0 vie).", ephemeral: true });
+            const launchError = getPhoenixLaunchError(battle, phoenixTeam, phoenixPlayer.id, opponent.id);
+            if (launchError) {
+                return interaction.reply({ content: `❌ ${launchError}`, ephemeral: true });
             }
 
-            // --- MISE À JOUR DU CURRENTMATCH ET ENREGISTREMENT ---
+            const isTeam1Initiator = phoenixTeam === 'team1';
+            const p1 = isTeam1Initiator ? phoenixPlayer : opponent;
+            const char1 = isTeam1Initiator ? phoenixChar : opponentChar;
+            const p2 = isTeam1Initiator ? opponent : phoenixPlayer;
+            const char2 = isTeam1Initiator ? opponentChar : phoenixChar;
+            const phoenixTeamName = battle.teams[phoenixTeam].name;
+            let swapStatusText = '';
+            if (shouldSwap) {
+                const isSwapped = toggleSwapSides();
+                swapStatusText = `\n\n🔄 *Overlay inversé : ${isSwapped ? 'Équipe 2 à gauche' : 'Équipe 1 à gauche'}*`;
+            }
+
             battle.currentMatch = {
                 p1: p1.id,
-                char1: char1,
                 p2: p2.id,
+                char1,
                 char2: char2,
-                isPhoenix: true
+                isPhoenix: true,
+                phoenixTeam
             };
 
             await battle.save();
@@ -62,7 +70,10 @@ module.exports = {
 
             const matchEmbed = new EmbedBuilder()
                 .setTitle('🔥 DUEL DE LA RÉSURRECTION DU PHOENIX 🔥')
-                .setDescription(`Les Enfers s'ouvrent. Le gagnant de ce combat brisera ses chaînes et reviendra à la vie avec **1 vie** !${swapStatusText}`)
+                .setDescription(
+                    `L’équipe **${phoenixTeamName}** déclenche son duel du Phénix.\n\n` +
+                    `Les Enfers s'ouvrent. Le joueur éliminé choisi devra vaincre son adversaire pour revenir dans la bataille avec **1 vie**.${swapStatusText}`
+                )
                 .setColor('#e67e22')
                 .addFields(
                     { name: `🔵 ${battle.teams.team1.name}`, value: `<@${p1.id}>\n*${char1Label}*`, inline: true },

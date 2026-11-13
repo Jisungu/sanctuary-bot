@@ -14,7 +14,7 @@ async function getOrCreateTeamRole(guild, teamName, color) {
     if (!role) {
         role = await guild.roles.create({
             name: teamName,
-            color: color,
+            colors: { primaryColor: color },
             reason: 'Rôle d\'équipe automatique pour la Team Battle'
         });
     }
@@ -110,7 +110,8 @@ module.exports = {
                 ephemeral: true
             });
 
-            const collectorFilter = i => i.user.id === interaction.user.id && i.customId === 'select_team1_members';
+            const collectorFilter = i => i.customId === 'select_team1_members'
+                && (i.user.id === interaction.user.id || i.memberPermissions?.has(PermissionFlagsBits.Administrator));
             
             try {
                 const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 120000 });
@@ -436,6 +437,8 @@ async function finalizeBattle(interaction, battle, team1Name, team2Name, viesIni
     // --- SAUVEGARDE AVEC PRISE EN COMPTE DU JUGEMENT DE LA BALANCE ---
     battle.status = 'started';
     battle.viesParJoueur = viesInitiales;
+    battle.phoenixUsedTeams = [];
+    battle.phoenixUsed = false;
     battle.balanceAdjustments.clear();
     Object.entries(modificationsVies).forEach(([playerId, adjustment]) => {
         battle.balanceAdjustments.set(playerId, adjustment);

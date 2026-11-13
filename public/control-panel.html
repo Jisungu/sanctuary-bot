@@ -1,0 +1,1343 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f3f5fa">
+    <title>Sanctuaire — Team Battle</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #17243b;
+            background: #f3f5fa;
+            font-synthesis: none;
+            --muted: #64728a;
+            --line: #e0e6f0;
+            --blue: #315eb8;
+            --blue-dark: #234a99;
+            --blue-soft: #edf3ff;
+            --green: #237b55;
+            --green-soft: #eaf7f0;
+            --red: #b53e4a;
+            --red-soft: #fff0f1;
+            --gold: #a86a12;
+            --gold-soft: #fff6e6;
+            --surface: #fff;
+            --shadow: 0 8px 26px rgba(27, 44, 75, .06);
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; min-width: 320px; min-height: 100vh; background: #f3f5fa; }
+        button, input, select { font: inherit; }
+        button {
+            min-height: 42px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            padding: 9px 14px;
+            color: #fff;
+            background: var(--blue);
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s, border-color .15s, transform .15s;
+        }
+        button:hover:not(:disabled) { background: var(--blue-dark); transform: translateY(-1px); }
+        button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+            outline: 3px solid #7ba4f8;
+            outline-offset: 2px;
+        }
+        button:disabled { cursor: not-allowed; opacity: .48; }
+        button.secondary { color: #31415b; background: #fff; border-color: var(--line); }
+        button.secondary:hover:not(:disabled) { background: #f7f9fc; }
+        button.danger { color: #fff; background: var(--red); }
+        button.danger:hover:not(:disabled) { background: #992e39; }
+        button.text-button { min-height: 34px; padding: 5px 8px; color: var(--red); background: transparent; }
+        button.text-button:hover:not(:disabled) { color: #8d2632; background: var(--red-soft); transform: none; }
+        button.presence-button { min-height: 32px; padding: 5px 9px; color: var(--green); background: var(--green-soft); font-size: .75rem; }
+        button.presence-button:hover:not(:disabled) { color: #185e40; background: #d9f0e3; transform: none; }
+        button.presence-button.marked { color: #526179; background: #eef1f6; }
+        input, select {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid #cdd6e4;
+            border-radius: 8px;
+            padding: 9px 11px;
+            color: #17243b;
+            background: #fff;
+        }
+        input::placeholder { color: #8793a7; }
+        input[type="checkbox"] { width: 18px; min-height: 18px; accent-color: var(--blue); }
+        label { display: block; color: #34445e; font-size: .88rem; font-weight: 700; }
+        .shell { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 24px 0 60px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 22px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand-mark {
+            display: grid;
+            width: 44px;
+            height: 44px;
+            place-items: center;
+            border-radius: 13px;
+            color: #fff;
+            background: linear-gradient(145deg, #4676d2, #274a94);
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+        .brand-name { margin: 0; font-size: 1.08rem; letter-spacing: .01em; }
+        .brand-caption { margin: 3px 0 0; color: var(--muted); font-size: .8rem; }
+        .top-actions { display: flex; align-items: center; gap: 9px; }
+        .server-field { display: grid; min-width: 230px; gap: 5px; }
+        .server-field label { font-size: .75rem; }
+        .server-field select { min-height: 40px; }
+        .page-title { margin: 0; font-size: clamp(1.6rem, 3vw, 2.1rem); letter-spacing: -.03em; }
+        .page-subtitle { margin: 7px 0 0; color: var(--muted); line-height: 1.5; }
+        .surface { border: 1px solid var(--line); border-radius: 15px; background: var(--surface); box-shadow: var(--shadow); }
+        .status-panel { padding: 22px 24px; }
+        .status-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+        .status-copy h1 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
+        .status-copy p { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
+        .status-badge { flex: 0 0 auto; border-radius: 999px; padding: 7px 11px; color: #34445e; background: #eef1f6; font-size: .78rem; font-weight: 800; }
+        .status-badge.registration { color: var(--blue-dark); background: var(--blue-soft); }
+        .status-badge.calling { color: #805009; background: var(--gold-soft); }
+        .status-badge.started { color: var(--green); background: var(--green-soft); }
+        .status-badge.finished { color: var(--muted); background: #eef1f6; }
+        .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 22px 0 0; padding: 0; list-style: none; }
+        .step { position: relative; display: grid; grid-template-columns: 27px minmax(0, 1fr); grid-template-rows: 27px auto; column-gap: 9px; row-gap: 5px; min-width: 0; color: #8793a7; font-size: .82rem; font-weight: 700; }
+        .step:not(:last-child)::after { position: absolute; top: 13px; left: 34px; right: 12px; height: 2px; content: ""; background: #e2e7ef; }
+        .step-number { z-index: 1; display: grid; width: 27px; height: 27px; grid-column: 1; grid-row: 1; place-items: center; border: 2px solid #d5dce7; border-radius: 50%; color: #79869a; background: #fff; font-size: .75rem; }
+        .step > span:last-child { grid-column: 1 / -1; grid-row: 2; }
+        .step.complete { color: var(--green); }
+        .step.complete .step-number { border-color: var(--green); color: #fff; background: var(--green); }
+        .step.current { color: var(--blue-dark); }
+        .step.current .step-number { border-color: var(--blue); color: #fff; background: var(--blue); }
+        .main-content { display: grid; gap: 16px; margin-top: 16px; }
+        .stage-panel { padding: 22px; }
+        .stage-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+        .stage-heading h2 { margin: 0; font-size: 1.18rem; }
+        .stage-heading p { max-width: 680px; margin: 5px 0 0; color: var(--muted); line-height: 1.5; }
+        .stage-number { flex: 0 0 auto; color: #8793a7; font-size: .78rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .workflow-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(270px, .8fr); gap: 16px; align-items: start; }
+        .subcard { min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 17px; background: #fff; }
+        .subcard h3 { margin: 0; font-size: 1rem; }
+        .subcard-copy { margin: 5px 0 14px; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+        .roster-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+        .metric { padding: 6px 9px; border-radius: 7px; color: #41516a; background: #f1f4f8; font-size: .8rem; font-weight: 750; }
+        .roster-list { display: grid; gap: 7px; max-height: 235px; overflow: auto; }
+        .roster-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 42px; border: 1px solid #e8edf4; border-radius: 8px; padding: 6px 9px 6px 11px; }
+        .roster-player-name { overflow: hidden; color: #283952; font-size: .88rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+        .roster-tags { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 7px; }
+        .tag { flex: 0 0 auto; border-radius: 999px; padding: 4px 7px; color: #526179; background: #eef1f6; font-size: .7rem; font-weight: 750; }
+        .tag.present { color: var(--green); background: var(--green-soft); }
+        .tag.waiting { color: #825416; background: var(--gold-soft); }
+        .empty-roster { padding: 17px 10px; color: var(--muted); text-align: center; font-size: .87rem; }
+        .divider { height: 1px; margin: 17px 0; background: var(--line); }
+        .picker-label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+        .picker-label small { color: var(--muted); font-size: .76rem; font-weight: 500; }
+        .segmented { display: inline-flex; gap: 4px; padding: 4px; border-radius: 9px; background: #eef1f6; }
+        .segmented button { min-height: 34px; padding: 6px 11px; border: 0; color: #5a6780; background: transparent; font-size: .82rem; }
+        .segmented button:hover:not(:disabled) { color: #243855; background: #fff; transform: none; }
+        .segmented button.selected { color: var(--blue-dark); background: #fff; box-shadow: 0 1px 3px rgba(25, 45, 80, .12); }
+        .picker-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .player-search { margin-bottom: 7px; }
+        .helper { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+        .player-results { display: grid; gap: 5px; max-height: 210px; overflow: auto; margin-top: 10px; }
+        .player-option { display: flex; align-items: center; gap: 10px; min-height: 48px; border: 1px solid #e7ecf3; border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+        .player-option:hover { border-color: #b8c9ea; background: #f8faff; }
+        .player-option input { width: 17px; min-height: 17px; flex: 0 0 17px; }
+        .player-option-copy { display: grid; min-width: 0; gap: 2px; }
+        .player-option-copy strong { overflow: hidden; color: #263750; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }
+        .player-option-copy small { color: var(--muted); font-size: .73rem; }
+        .selection-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 11px; }
+        .selection-count { color: var(--muted); font-size: .8rem; }
+        .next-action { display: grid; gap: 12px; border-color: #d7e2f5; background: #f7f9fe; }
+        .next-action .action-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; color: var(--blue); background: #e4edff; font-size: 1.15rem; }
+        .next-action h3 { margin-top: 2px; }
+        .next-action p { margin: 0; color: var(--muted); font-size: .86rem; line-height: 1.5; }
+        .next-action button { width: 100%; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .field { display: grid; min-width: 0; gap: 6px; }
+        .field-help { margin: 0; color: var(--muted); font-size: .77rem; line-height: 1.4; }
+        .wide { grid-column: 1 / -1; }
+        .checkbox-line { display: flex; align-items: flex-start; gap: 9px; color: #41516a; font-size: .85rem; line-height: 1.4; }
+        .checkbox-line input { margin-top: 1px; }
+        .live-layout { display: grid; gap: 16px; }
+        .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+        .team-card { border: 1px solid var(--line); border-radius: 12px; padding: 15px; background: #fff; }
+        .team-card.blue { border-top: 3px solid #4776d2; }
+        .team-card.red { border-top: 3px solid #cc5862; }
+        .team-card h3 { margin: 0 0 11px; font-size: .95rem; }
+        .team-player-list { display: grid; gap: 7px; }
+        .team-player { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #3b4b64; font-size: .84rem; }
+        .hearts { flex: 0 0 auto; color: #d74d5b; white-space: nowrap; letter-spacing: .04em; }
+        .match-card { border: 1px solid #d6e1f4; border-radius: 12px; padding: 18px; background: linear-gradient(140deg, #f8faff, #fff); }
+        .match-card h3 { margin: 0; font-size: 1rem; }
+        .match-line { margin: 8px 0 14px; color: #344660; font-size: 1.05rem; font-weight: 750; line-height: 1.45; }
+        .button-row { display: flex; flex-wrap: wrap; gap: 9px; }
+        .button-row button { flex: 1; min-width: 175px; }
+        .quick-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+        .quick-actions button { flex: 1; min-width: 160px; }
+        .callout { border: 1px solid #d7e8df; border-radius: 10px; padding: 12px 14px; color: #30664d; background: #f3fbf6; font-size: .84rem; line-height: 1.5; }
+        .finish-card { border-color: #d7e8df; background: #f5fbf7; }
+        .notice { min-height: 23px; margin: 12px 2px 0; color: var(--muted); font-size: .88rem; line-height: 1.5; }
+        .notice.error { color: #a82f3b; }
+        .notice.success { color: #237b55; }
+        .advanced { margin-top: 16px; overflow: hidden; }
+        .advanced > summary { padding: 17px 20px; color: #34445e; cursor: pointer; font-weight: 750; }
+        .advanced-body { display: grid; gap: 10px; padding: 0 16px 16px; }
+        .advanced-command { border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+        .advanced-command > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
+        .advanced-command > summary::-webkit-details-marker { display: none; }
+        .advanced-command > summary::after { content: '+'; color: var(--blue); font-size: 1.1rem; font-weight: 800; }
+        .advanced-command[open] > summary { border-bottom: 1px solid var(--line); }
+        .advanced-command[open] > summary::after { content: '−'; }
+        .advanced-command-title { display: grid; gap: 3px; }
+        .advanced-command-title strong { font-size: .88rem; }
+        .advanced-command-title small { color: var(--muted); font-size: .75rem; }
+        .advanced-form { display: grid; gap: 12px; padding: 14px; border-top: 1px solid var(--line); }
+        .advanced-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+        .advanced-note { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+        .auth { width: min(500px, calc(100% - 32px)); margin: 10vh auto; padding: 27px; }
+        .auth h1 { margin: 6px 0; font-size: 1.7rem; }
+        .auth p { color: var(--muted); line-height: 1.5; }
+        .auth-form { display: flex; gap: 9px; margin-top: 18px; }
+        .auth-form input { flex: 1; }
+        .hidden { display: none !important; }
+        @media (max-width: 760px) {
+            .shell { width: min(100% - 22px, 620px); padding-top: 16px; }
+            .topbar { align-items: flex-start; flex-direction: column; }
+            .top-actions { width: 100%; align-items: flex-end; }
+            .server-field { flex: 1; min-width: 0; }
+            .status-panel, .stage-panel { padding: 17px; }
+            .workflow-grid { grid-template-columns: 1fr; }
+            .steps { gap: 4px; }
+            .step { align-items: flex-start; flex-direction: column; gap: 5px; font-size: .7rem; }
+            .step:not(:last-child)::after { top: 13px; left: 29px; right: 5px; }
+            .teams { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 480px) {
+            .auth-form { flex-direction: column; }
+            .top-actions { align-items: stretch; flex-wrap: wrap; }
+            .server-field { flex-basis: 100%; }
+            .status-top { flex-direction: column; gap: 10px; }
+            .step { font-size: .65rem; }
+            .stage-heading { flex-direction: column; gap: 6px; }
+            .form-grid, .advanced-fields { grid-template-columns: 1fr; }
+            .selection-footer { align-items: stretch; flex-direction: column; }
+            .button-row { flex-direction: column; }
+            .button-row button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <section id="auth" class="surface auth" aria-labelledby="auth-title">
+        <p class="brand-caption">SANCTUAIRE · ACCÈS ADMINISTRATEUR</p>
+        <h1 id="auth-title">Team Battle</h1>
+        <p>Connectez-vous avec le jeton <code>CONTROL_PANEL_TOKEN</code> configuré sur le serveur.</p>
+        <form id="auth-form" class="auth-form">
+            <label class="hidden" for="token">Jeton de contrôle</label>
+            <input id="token" type="password" autocomplete="current-password" placeholder="Jeton de contrôle" required>
+            <button type="submit">Ouvrir le panneau</button>
+        </form>
+        <p id="auth-notice" class="notice" role="status" aria-live="polite"></p>
+    </section>
+
+    <div id="dashboard" class="shell hidden">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-mark" aria-hidden="true">S</div>
+                <div>
+                    <p class="brand-name">Sanctuaire <strong>Team Battle</strong></p>
+                    <p class="brand-caption">Gestion du tournoi</p>
+                </div>
+            </div>
+            <div class="top-actions">
+                <div class="server-field">
+                    <label for="guild-select">Serveur Discord</label>
+                    <select id="guild-select" aria-label="Choisir le serveur Discord"></select>
+                </div>
+                <button id="refresh" class="secondary" type="button" aria-label="Actualiser les données">Actualiser</button>
+                <button id="logout" class="secondary" type="button">Quitter</button>
+            </div>
+        </header>
+
+        <section id="status-panel" class="surface status-panel" aria-live="polite">
+            <div class="status-top">
+                <div class="status-copy">
+                    <h1 id="status-title">Chargement…</h1>
+                    <p id="status-description"></p>
+                </div>
+                <span id="status-badge" class="status-badge"></span>
+            </div>
+            <ol id="progress-steps" class="steps" aria-label="Étapes de la Team Battle">
+                <li class="step" data-step="registration"><span class="step-number">1</span><span>Inscriptions</span></li>
+                <li class="step" data-step="calling"><span class="step-number">2</span><span>Appel</span></li>
+                <li class="step" data-step="started"><span class="step-number">3</span><span>Matchs</span></li>
+                <li class="step" data-step="finished"><span class="step-number">4</span><span>Terminé</span></li>
+            </ol>
+        </section>
+
+        <p id="notice" class="notice" role="status" aria-live="polite"></p>
+
+        <main class="main-content">
+            <section id="empty-view" class="surface stage-panel hidden">
+                <div class="stage-heading">
+                    <div>
+                        <h2 id="empty-title">Aucune bataille en cours</h2>
+                        <p id="empty-description">Planifiez une bataille pour commencer. Le bot publiera l’annonce dans le salon configuré.</p>
+                    </div>
+                    <span class="stage-number">Prochaine étape</span>
+                </div>
+                <form id="create-form" class="form-grid">
+                    <div class="field">
+                        <label for="battle-date">Date de la bataille</label>
+                        <input id="battle-date" name="date" type="date" required>
+                        <p class="field-help">La date sera affichée au format JJ/MM/AAAA sur Discord.</p>
+                    </div>
+                    <div class="field">
+                        <label for="battle-time">Heure de début</label>
+                        <input id="battle-time" name="heure" type="time" required>
+                    </div>
+                    <button class="wide" type="submit">Créer les inscriptions</button>
+                </form>
+            </section>
+
+            <section id="preparation-view" class="surface stage-panel hidden">
+                <div class="stage-heading">
+                    <div>
+                        <h2 id="preparation-title">Gérer les joueurs</h2>
+                        <p id="preparation-description"></p>
+                    </div>
+                    <span id="preparation-step" class="stage-number">Étape 1 / 2</span>
+                </div>
+                <div class="workflow-grid">
+                    <section class="subcard" aria-labelledby="roster-title">
+                        <h3 id="roster-title">Liste des joueurs</h3>
+                        <p id="roster-help" class="subcard-copy">Ajoutez des joueurs trouvés dans la base du bot ou retirez ceux qui ne participent plus.</p>
+                        <div id="roster-summary" class="roster-summary"></div>
+                        <div id="roster-list" class="roster-list" aria-live="polite"></div>
+                        <div class="divider"></div>
+                        <div class="picker-header">
+                            <h3 id="picker-title">Rechercher dans la base de joueurs</h3>
+                            <div class="segmented" role="group" aria-label="Action sur les joueurs">
+                                <button id="mode-add" class="selected" type="button" aria-pressed="true">Ajouter</button>
+                                <button id="mode-remove" type="button" aria-pressed="false">Retirer</button>
+                            </div>
+                        </div>
+                        <label class="picker-label" for="player-search">
+                            <span id="search-label">Nom du joueur</span>
+                            <small id="search-count"></small>
+                        </label>
+                        <input id="player-search" class="player-search" type="search" autocomplete="off" placeholder="Tapez au moins 2 lettres">
+                        <p id="picker-help" class="helper">Les profils viennent de la base du bot. Recherchez par nom ou par début d’identifiant Discord; les inscrits sont masqués.</p>
+                        <div id="player-results" class="player-results" role="list" aria-label="Résultats de joueurs">
+                            <p class="empty-roster">Saisissez un nom pour rechercher.</p>
+                        </div>
+                        <div class="selection-footer">
+                            <span id="selection-count" class="selection-count">Aucun joueur sélectionné</span>
+                            <button id="apply-roster" type="button" disabled>Ajouter les joueurs</button>
+                        </div>
+                    </section>
+
+                    <section class="subcard next-action">
+                        <span id="next-icon" class="action-icon" aria-hidden="true">➜</span>
+                        <h3 id="next-title">Ensuite : ouvrir l’appel</h3>
+                        <p id="next-description"></p>
+                        <div id="registration-next">
+                            <button id="checkin" type="button">Ouvrir l’appel des joueurs</button>
+                        </div>
+                        <form id="start-form" class="hidden">
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label for="team-name-1">Nom de l’équipe 1</label>
+                                    <input id="team-name-1" value="Équipe 1" maxlength="80" required>
+                                </div>
+                                <div class="field">
+                                    <label for="team-name-2">Nom de l’équipe 2</label>
+                                    <input id="team-name-2" value="Équipe 2" maxlength="80" required>
+                                </div>
+                                <div class="field wide">
+                                    <label for="lives">Vies par joueur</label>
+                                    <input id="lives" type="number" min="1" max="20" value="3" required>
+                                </div>
+                                <label class="checkbox-line wide" for="manual-teams">
+                                    <input id="manual-teams" type="checkbox">
+                                    <span>Choisir les équipes manuellement sur Discord après le démarrage</span>
+                                </label>
+                            </div>
+                            <p id="start-help" class="field-help wide"></p>
+                            <button id="start-battle" class="wide" type="submit">Former les équipes et démarrer</button>
+                        </form>
+                    </section>
+                </div>
+            </section>
+
+            <section id="live-view" class="surface stage-panel hidden">
+                <div class="stage-heading">
+                    <div>
+                        <h2>Battle en cours</h2>
+                        <p id="live-description">Consultez les vies, annoncez un duel et validez son résultat.</p>
+                    </div>
+                    <span id="history-count" class="stage-number"></span>
+                </div>
+                <div class="live-layout">
+                    <div class="teams">
+                        <section class="team-card blue">
+                            <h3 id="team1-name">Équipe 1</h3>
+                            <div id="team1-players" class="team-player-list"></div>
+                        </section>
+                        <section class="team-card red">
+                            <h3 id="team2-name">Équipe 2</h3>
+                            <div id="team2-players" class="team-player-list"></div>
+                        </section>
+                    </div>
+
+                    <section id="announce-card" class="match-card">
+                        <h3>Annoncer un duel</h3>
+                        <p class="subcard-copy">Annoncez un duel classique ou, si les conditions sont réunies, un duel du Phénix.</p>
+                        <form id="match-form" class="form-grid">
+                            <p id="match-help" class="field-help wide" role="status"></p>
+                            <label class="checkbox-line wide" for="phoenix">
+                                <input id="phoenix" type="checkbox">
+                                <span>Duel du Phénix : une équipe en retard choisit un membre éliminé</span>
+                            </label>
+                            <div id="phoenix-team-field" class="field wide hidden">
+                                <label for="phoenix-team">Équipe qui déclenche le duel</label>
+                                <select id="phoenix-team"></select>
+                            </div>
+                            <div class="field" id="p1-field">
+                                <label for="p1">Joueur — équipe 1</label>
+                                <select id="p1" required></select>
+                            </div>
+                            <div class="field" id="char1-field">
+                                <label for="char1">Personnage — équipe 1</label>
+                                <select id="char1" required></select>
+                            </div>
+                            <div class="field" id="p2-field">
+                                <label for="p2">Joueur — équipe 2</label>
+                                <select id="p2" required></select>
+                            </div>
+                            <div class="field" id="char2-field">
+                                <label for="char2">Personnage — équipe 2</label>
+                                <select id="char2" required></select>
+                            </div>
+                            <label class="checkbox-line wide" for="swap">
+                                <input id="swap" type="checkbox">
+                                <span>Inverser les côtés de l’overlay pour ce duel</span>
+                            </label>
+                            <button id="announce" class="wide" type="submit">Annoncer le duel sur Discord</button>
+                        </form>
+                    </section>
+
+                    <section id="current-match" class="match-card hidden">
+                        <h3>Résultat à enregistrer</h3>
+                        <p id="match-line" class="match-line"></p>
+                        <p class="subcard-copy">Après validation, les vies seront mises à jour et le récapitulatif sera publié sur Discord.</p>
+                        <div class="button-row">
+                            <button id="win-p1" type="button">Victoire équipe 1</button>
+                            <button id="win-p2" class="danger" type="button">Victoire équipe 2</button>
+                        </div>
+                    </section>
+
+                    <div class="quick-actions">
+                        <button id="toss" class="secondary" type="button">🎲 Lancer le tirage au sort</button>
+                        <button id="undo" class="secondary" type="button">↶ Annuler le dernier résultat</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="finished-view" class="surface stage-panel finish-card hidden">
+                <div class="stage-heading">
+                    <div>
+                        <h2>Bataille terminée</h2>
+                        <p>Le dernier récapitulatif des vies a été publié sur Discord. Vous pouvez préparer la prochaine bataille.</p>
+                    </div>
+                    <span class="stage-number">Terminé</span>
+                </div>
+                <div class="teams">
+                    <section class="team-card blue">
+                        <h3 id="finished-team1-name">Équipe 1</h3>
+                        <div id="finished-team1-players" class="team-player-list"></div>
+                    </section>
+                    <section class="team-card red">
+                        <h3 id="finished-team2-name">Équipe 2</h3>
+                        <div id="finished-team2-players" class="team-player-list"></div>
+                    </section>
+                </div>
+                <div class="divider"></div>
+                <h3>Préparer la prochaine bataille</h3>
+                <form id="next-create-form" class="form-grid">
+                    <div class="field">
+                        <label for="next-battle-date">Date</label>
+                        <input id="next-battle-date" type="date" required>
+                    </div>
+                    <div class="field">
+                        <label for="next-battle-time">Heure</label>
+                        <input id="next-battle-time" type="time" required>
+                    </div>
+                    <button class="wide" type="submit">Créer les prochaines inscriptions</button>
+                </form>
+                <button id="undo-finished" class="secondary" type="button">↶ Annuler le dernier match</button>
+            </section>
+        </main>
+
+        <details id="advanced" class="surface advanced hidden">
+            <summary>Autres commandes du bot</summary>
+            <div>
+                <p class="advanced-note">Les actions habituelles sont disponibles dans le parcours principal. Ces commandes servent aux opérations ponctuelles.</p>
+                <div id="advanced-commands" class="advanced-body"></div>
+            </div>
+        </details>
+    </div>
+
+    <script>
+        const authSection = document.getElementById('auth');
+        const dashboard = document.getElementById('dashboard');
+        const tokenInput = document.getElementById('token');
+        const authNotice = document.getElementById('auth-notice');
+        const notice = document.getElementById('notice');
+        const guildSelect = document.getElementById('guild-select');
+        const playerSearch = document.getElementById('player-search');
+        const selectedPlayers = new Map();
+        const primaryCommands = new Set([
+            'battle-create', 'battle-checkin', 'battle-start',
+            'battle-register', 'battle-unregister',
+            'battle-match', 'battle-phoenix', 'battle-toss', 'battle-undo'
+        ]);
+        const labels = {
+            date: 'Date', heure: 'Heure', equipe: 'Équipe qui déclenche le duel',
+            p1: 'Joueur éliminé à ressusciter', char1: 'Personnage du joueur choisi',
+            p2: 'Adversaire', char2: 'Personnage de l’adversaire',
+            equipe1: 'Nom de l’équipe 1', equipe2: 'Nom de l’équipe 2',
+            vies: 'Vies par joueur', manuel: 'Choisir les équipes manuellement',
+            joueur: 'Joueur', joueur1: 'Joueur 1', joueur2: 'Joueur 2', joueur3: 'Joueur 3',
+            joueur4: 'Joueur 4', joueur5: 'Joueur 5', joueur6: 'Joueur 6', joueur7: 'Joueur 7',
+            joueur8: 'Joueur 8', joueur9: 'Joueur 9', joueur10: 'Joueur 10',
+            p1: 'Joueur de l’équipe 1', p2: 'Joueur de l’équipe 2',
+            char1: 'Personnage — équipe 1', char2: 'Personnage — équipe 2',
+            ancien: 'Joueur à remplacer', nouveau: 'Joueur remplaçant',
+            niveau: 'Niveau', pseudo: 'Pseudonyme'
+        };
+        const advancedCommandLabels = {
+            'battle-create-direct': 'Créer une bataille avec équipes définies',
+            'battle-sub': 'Remplacer un joueur',
+            'battle-swap': 'Inverser les côtés de l’overlay',
+            'player-profile': 'Consulter le profil d’un joueur',
+            'battle-player-setting': 'Modifier le profil d’un joueur',
+            'battle-refresh-stats': 'Recalculer les statistiques',
+            'battle-clean-channel': 'Supprimer les salons de la bataille terminée'
+        };
+        let token = sessionStorage.getItem('controlPanelToken') || '';
+        let battles = [];
+        let characters = [];
+        let guilds = [];
+        let commands = [];
+        let selectedGuildId = '';
+        let selectedBattle = null;
+        let playerMode = 'add';
+        let playerSearchTimer = null;
+        let playerSearchSequence = 0;
+
+        function setNotice(message, type = '') {
+            notice.textContent = message || '';
+            notice.className = `notice ${type}`;
+        }
+
+        async function api(url, options = {}) {
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Control-Panel-Token': token,
+                    ...(options.headers || {})
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (response.status === 401) showLogin('Jeton invalide. Vérifiez le jeton puis réessayez.');
+                throw new Error(data.error || 'Une erreur est survenue.');
+            }
+            return data;
+        }
+
+        function showLogin(message = '') {
+            token = '';
+            sessionStorage.removeItem('controlPanelToken');
+            dashboard.classList.add('hidden');
+            authSection.classList.remove('hidden');
+            authNotice.textContent = message;
+            authNotice.className = `notice ${message ? 'error' : ''}`;
+            tokenInput.focus();
+        }
+
+        function fillSelect(select, options, placeholder) {
+            select.replaceChildren();
+            const first = document.createElement('option');
+            first.value = '';
+            first.textContent = placeholder;
+            select.append(first);
+            for (const item of options) {
+                const option = document.createElement('option');
+                option.value = item.value;
+                option.textContent = item.label;
+                select.append(option);
+            }
+        }
+
+        function formatBattleDate(value) {
+            const [year, month, day] = value.split('-');
+            return day ? `${day}/${month}/${year}` : '';
+        }
+
+        function renderProgress(status) {
+            const order = ['registration', 'calling', 'started', 'finished'];
+            const activeIndex = order.indexOf(status);
+            for (const step of document.querySelectorAll('.step')) {
+                const index = order.indexOf(step.dataset.step);
+                step.classList.toggle('complete', activeIndex >= 0 && index < activeIndex);
+                step.classList.toggle('current', activeIndex === index);
+                if (activeIndex === index) step.setAttribute('aria-current', 'step');
+                else step.removeAttribute('aria-current');
+            }
+        }
+
+        function renderBattle() {
+            selectedGuildId = guildSelect.value;
+            selectedBattle = battles.find(battle => battle.guildId === selectedGuildId) || null;
+            const hasGuild = Boolean(selectedGuildId);
+            const status = selectedBattle?.status || 'none';
+            const statusTitle = document.getElementById('status-title');
+            const statusDescription = document.getElementById('status-description');
+            const statusBadge = document.getElementById('status-badge');
+
+            document.getElementById('status-panel').classList.toggle('hidden', !hasGuild);
+            document.getElementById('empty-view').classList.toggle('hidden', !hasGuild || Boolean(selectedBattle));
+            document.getElementById('preparation-view').classList.toggle('hidden', !['registration', 'calling'].includes(status));
+            document.getElementById('live-view').classList.toggle('hidden', status !== 'started');
+            document.getElementById('finished-view').classList.toggle('hidden', status !== 'finished');
+            document.getElementById('advanced').classList.toggle('hidden', !hasGuild);
+            if (!hasGuild) return;
+
+            renderProgress(status);
+            const labelsByStatus = {
+                none: ['Aucune bataille en préparation', 'Créez une annonce pour ouvrir les inscriptions.', 'Prêt à démarrer'],
+                registration: ['Les inscriptions sont ouvertes', 'Ajoutez ou retirez les participants, puis ouvrez l’appel quand la liste est prête.', 'Inscriptions'],
+                calling: ['L’appel des joueurs est en cours', 'Vérifiez les inscrits et formez les équipes avec les joueurs présents.', 'Appel'],
+                started: ['La bataille est en cours', 'Annoncez les duels et enregistrez leurs résultats depuis cette page.', 'Matchs'],
+                finished: ['La bataille est terminée', 'Le résultat final et les vies restantes sont conservés dans le récapitulatif Discord.', 'Terminé']
+            };
+            const [title, description, badge] = labelsByStatus[status];
+            statusTitle.textContent = title;
+            statusDescription.textContent = selectedBattle
+                ? `${description}${selectedBattle.dateTournoi ? ` · ${selectedBattle.dateTournoi}${selectedBattle.heureTournoi ? ` à ${selectedBattle.heureTournoi}` : ''}` : ''}`
+                : description;
+            statusBadge.textContent = badge;
+            statusBadge.className = `status-badge ${status}`;
+
+            document.getElementById('empty-title').textContent = status === 'finished'
+                ? 'Préparez la prochaine bataille'
+                : 'Aucune bataille en cours';
+            document.getElementById('empty-description').textContent = status === 'finished'
+                ? 'Choisissez une date et une heure pour ouvrir de nouvelles inscriptions.'
+                : 'Planifiez une bataille pour commencer. Le bot publiera l’annonce dans le salon configuré.';
+
+            if (['registration', 'calling'].includes(status)) {
+                document.getElementById('preparation-title').textContent =
+                    status === 'registration' ? 'Gérer les inscriptions' : 'Vérifier l’appel et former les équipes';
+                document.getElementById('preparation-description').textContent =
+                    status === 'registration'
+                        ? 'La liste est synchronisée avec Discord. Les joueurs ajoutés seront enregistrés et le message d’inscription sera mis à jour.'
+                        : 'Les inscrits confirment leur présence avec le bouton publié sur Discord. Vous pouvez aussi ajouter ou retirer des joueurs ici.';
+                document.getElementById('roster-help').textContent = status === 'calling'
+                    ? 'Marquez manuellement présents les joueurs qui ne peuvent pas utiliser le bouton Discord. Vous pouvez aussi ajouter ou retirer des inscrits.'
+                    : 'Ajoutez des joueurs trouvés dans la base du bot ou retirez ceux qui ne participent plus.';
+                document.getElementById('preparation-step').textContent = status === 'registration' ? 'Étape 1 / 2' : 'Étape 2 / 2';
+                document.getElementById('registration-next').classList.toggle('hidden', status !== 'registration');
+                document.getElementById('start-form').classList.toggle('hidden', status !== 'calling');
+                document.getElementById('checkin').disabled = !(selectedBattle.participants || []).length;
+                document.getElementById('start-battle').disabled = (selectedBattle.presents || []).length < 2;
+                document.getElementById('start-help').textContent = (selectedBattle.presents || []).length < 2
+                    ? 'Il faut au moins deux joueurs présents pour former les équipes.'
+                    : 'Les joueurs ajoutés pendant l’appel sont automatiquement comptés comme présents.';
+                document.getElementById('next-title').textContent =
+                    status === 'registration' ? 'Ensuite : ouvrir l’appel' : 'Ensuite : former les équipes';
+                document.getElementById('next-description').textContent = status === 'registration'
+                    ? 'Quand les joueurs sont inscrits, ouvrez le pointage. Le bot publiera le bouton de confirmation de présence sur Discord.'
+                    : `${selectedBattle.presents?.length || 0} joueur(s) présent(s) sur ${selectedBattle.participants?.length || 0}. Choisissez les équipes et le nombre de vies pour lancer la battle.`;
+                renderRoster();
+            }
+
+            if (status === 'started') renderLiveBattle();
+            if (status === 'finished') renderFinishedBattle();
+            renderAdvancedCommands();
+        }
+
+        function renderRoster() {
+            const participants = selectedBattle.participants || [];
+            const waitlist = selectedBattle.waitlist || [];
+            const presentCount = selectedBattle.presents?.length || 0;
+            const summary = document.getElementById('roster-summary');
+            summary.replaceChildren();
+            [
+                `${participants.length} inscrit(s)`,
+                `${presentCount} présent(s)`,
+                `${waitlist.length} en attente`
+            ].forEach(text => {
+                const metric = document.createElement('span');
+                metric.className = 'metric';
+                metric.textContent = text;
+                summary.append(metric);
+            });
+
+            const list = document.getElementById('roster-list');
+            list.replaceChildren();
+            const entries = [
+                ...participants.map(player => ({ ...player, isParticipant: true, tag: player.present ? 'Présent' : 'Inscrit', tagClass: player.present ? 'present' : '' })),
+                ...waitlist.map(player => ({ ...player, isParticipant: false, tag: 'En attente', tagClass: 'waiting' }))
+            ];
+            if (!entries.length) {
+                const empty = document.createElement('p');
+                empty.className = 'empty-roster';
+                empty.textContent = 'Aucun joueur pour le moment. Recherchez un profil ci-dessous pour l’ajouter.';
+                list.append(empty);
+                return;
+            }
+
+            for (const player of entries) {
+                const row = document.createElement('div');
+                row.className = 'roster-row';
+                const name = document.createElement('span');
+                name.className = 'roster-player-name';
+                name.textContent = player.name;
+                const actions = document.createElement('div');
+                actions.className = 'roster-tags';
+                const tag = document.createElement('span');
+                tag.className = `tag ${player.tagClass}`;
+                tag.textContent = player.tag;
+                if (selectedBattle.status === 'calling' && player.isParticipant) {
+                    const presence = document.createElement('button');
+                    presence.className = `presence-button ${player.present ? 'marked' : ''}`;
+                    presence.type = 'button';
+                    presence.textContent = player.present ? 'Retirer présence' : 'Marquer présent';
+                    presence.setAttribute('aria-label', `${player.present ? 'Retirer la présence de' : 'Marquer présent'} ${player.name}`);
+                    presence.addEventListener('click', async () => {
+                        try {
+                            await runApiAction('/api/control-panel/presence', {
+                                guildId: selectedGuildId,
+                                playerId: player.id,
+                                present: !player.present
+                            }, `${player.present ? 'Retirer' : 'Marquer'} ${player.name} ${player.present ? 'comme absent' : 'comme présent'} ?`);
+                        } catch (error) {
+                            setNotice(error.message, 'error');
+                        }
+                    });
+                    actions.append(tag, presence);
+                } else {
+                    actions.append(tag);
+                }
+                const remove = document.createElement('button');
+                remove.className = 'text-button';
+                remove.type = 'button';
+                remove.textContent = 'Retirer';
+                remove.setAttribute('aria-label', `Retirer ${player.name} de la bataille`);
+                remove.addEventListener('click', () => applyRosterAction('remove', [{ id: player.id, name: player.name }]));
+                actions.append(remove);
+                row.append(name, actions);
+                list.append(row);
+            }
+        }
+
+        function renderTeam(team, nameId, listId, maxLives) {
+            document.getElementById(nameId).textContent = team.name || 'Équipe';
+            const list = document.getElementById(listId);
+            list.replaceChildren();
+            if (!team.players.length) {
+                const empty = document.createElement('p');
+                empty.className = 'empty-roster';
+                empty.textContent = 'Aucun joueur';
+                list.append(empty);
+                return;
+            }
+
+            for (const player of team.players) {
+                const row = document.createElement('div');
+                row.className = 'team-player';
+                const name = document.createElement('span');
+                name.textContent = player.name;
+                const lives = document.createElement('span');
+                lives.className = 'hearts';
+                const count = Number.isFinite(player.lives) ? Math.max(0, player.lives) : 0;
+                const total = Number.isFinite(maxLives) ? Math.max(0, maxLives) : 0;
+                lives.textContent = total ? `${'❤️'.repeat(count)}${'🖤'.repeat(Math.max(0, total - count))}` : '';
+                lives.setAttribute('aria-label', `${count} vie(s) sur ${total}`);
+                row.append(name, lives);
+                list.append(row);
+            }
+        }
+
+        function renderLiveBattle() {
+            renderTeam(selectedBattle.team1, 'team1-name', 'team1-players', selectedBattle.livesPerPlayer);
+            renderTeam(selectedBattle.team2, 'team2-name', 'team2-players', selectedBattle.livesPerPlayer);
+            document.getElementById('history-count').textContent = `${selectedBattle.historyLength} duel(s) joué(s)`;
+            document.getElementById('toss').disabled = false;
+            document.getElementById('undo').disabled = selectedBattle.historyLength === 0;
+            document.getElementById('phoenix').checked = false;
+            fillSelect(document.getElementById('char1'), characters.map(item => ({ value: item.value, label: item.label })), 'Choisir un personnage');
+            fillSelect(document.getElementById('char2'), characters.map(item => ({ value: item.value, label: item.label })), 'Choisir un personnage');
+
+            const currentMatch = selectedBattle.currentMatch;
+            const match = currentMatch?.p1 && currentMatch?.p2 && currentMatch?.char1 && currentMatch?.char2
+                ? currentMatch
+                : null;
+            document.getElementById('announce-card').classList.toggle('hidden', Boolean(match));
+            document.getElementById('current-match').classList.toggle('hidden', !match);
+            if (match) {
+                const player1 = selectedBattle.team1.players.find(player => player.id === match.p1);
+                const player2 = selectedBattle.team2.players.find(player => player.id === match.p2);
+                const char1 = characters.find(character => character.value === match.char1)?.label || match.char1;
+                const char2 = characters.find(character => character.value === match.char2)?.label || match.char2;
+                const phoenixTeamName = match.phoenixTeam
+                    ? selectedBattle[match.phoenixTeam]?.name
+                    : null;
+                document.getElementById('match-line').textContent =
+                    `${match.isPhoenix ? `🔥 Phoenix — ${phoenixTeamName || 'équipe initiatrice'} : ` : ''}${player1?.name || match.p1} (${char1}) contre ${player2?.name || match.p2} (${char2})`;
+                document.getElementById('win-p1').textContent = `Victoire de ${player1?.name || 'l’équipe 1'}`;
+                document.getElementById('win-p2').textContent = `Victoire de ${player2?.name || 'l’équipe 2'}`;
+            } else {
+                renderMatchOptions();
+            }
+        }
+
+        function renderMatchOptions() {
+            if (!selectedBattle) return;
+            const phoenixCheckbox = document.getElementById('phoenix');
+            const phoenixTeamField = document.getElementById('phoenix-team-field');
+            const phoenixTeamSelect = document.getElementById('phoenix-team');
+            const eligibleTeams = selectedBattle.phoenixEligibleTeams || [];
+            phoenixCheckbox.disabled = eligibleTeams.length === 0;
+            if (phoenixCheckbox.checked && !eligibleTeams.length) phoenixCheckbox.checked = false;
+            const phoenix = phoenixCheckbox.checked;
+            const previousPhoenixTeam = phoenixTeamSelect.value;
+            fillSelect(phoenixTeamSelect, eligibleTeams.map(teamKey => ({
+                value: teamKey,
+                label: selectedBattle[teamKey].name
+            })), 'Choisir une équipe');
+            phoenixTeamSelect.value = eligibleTeams.includes(previousPhoenixTeam)
+                ? previousPhoenixTeam
+                : eligibleTeams[0] || '';
+            phoenixTeamField.classList.toggle('hidden', !phoenix);
+
+            const phoenixTeam = phoenixTeamSelect.value;
+            const optionsFor = (team, teamKey) => (team?.players || [])
+                .filter(player => phoenix
+                    ? teamKey === phoenixTeam ? player.lives <= 0 : true
+                    : player.lives > 0)
+                .map(player => ({
+                    value: player.id,
+                    label: `${player.name} · ${player.lives} vie(s)`
+                }));
+            const p1Options = optionsFor(selectedBattle.team1, 'team1');
+            const p2Options = optionsFor(selectedBattle.team2, 'team2');
+            fillSelect(document.getElementById('p1'), p1Options, 'Choisir un joueur');
+            fillSelect(document.getElementById('p2'), p2Options, 'Choisir un joueur');
+
+            const p1Label = document.querySelector('label[for="p1"]');
+            const p2Label = document.querySelector('label[for="p2"]');
+            const char1Label = document.querySelector('label[for="char1"]');
+            const char2Label = document.querySelector('label[for="char2"]');
+            if (phoenix && phoenixTeam === 'team2') {
+                p1Label.textContent = `Adversaire — ${selectedBattle.team1.name}`;
+                p2Label.textContent = `Joueur éliminé à ressusciter — ${selectedBattle.team2.name}`;
+                char1Label.textContent = 'Personnage — adversaire';
+                char2Label.textContent = 'Personnage — joueur à ressusciter';
+            } else if (phoenix) {
+                p1Label.textContent = `Joueur éliminé à ressusciter — ${selectedBattle.team1.name}`;
+                p2Label.textContent = `Adversaire — ${selectedBattle.team2.name}`;
+                char1Label.textContent = 'Personnage — joueur à ressusciter';
+                char2Label.textContent = 'Personnage — adversaire';
+            } else {
+                p1Label.textContent = `Joueur — ${selectedBattle.team1.name}`;
+                p2Label.textContent = `Joueur — ${selectedBattle.team2.name}`;
+                char1Label.textContent = `Personnage — ${selectedBattle.team1.name}`;
+                char2Label.textContent = `Personnage — ${selectedBattle.team2.name}`;
+            }
+
+            const swapLabel = document.querySelector('label[for="swap"]');
+            const fieldOrder = phoenix
+                ? phoenixTeam === 'team2'
+                    ? ['p2-field', 'p1-field', 'char2-field', 'char1-field']
+                    : ['p1-field', 'p2-field', 'char1-field', 'char2-field']
+                : ['p1-field', 'char1-field', 'p2-field', 'char2-field'];
+            for (const fieldId of fieldOrder) {
+                document.getElementById(fieldId).parentElement.insertBefore(
+                    document.getElementById(fieldId),
+                    swapLabel
+                );
+            }
+
+            const noPlayers = !p1Options.length || !p2Options.length;
+            const usedTeamNames = (selectedBattle.phoenixUsedTeams || [])
+                .map(teamKey => selectedBattle[teamKey]?.name)
+                .filter(Boolean);
+            document.getElementById('announce').disabled = noPlayers || (phoenix && !phoenixTeam);
+            document.getElementById('match-help').textContent = phoenix
+                ? noPlayers
+                    ? 'Aucun adversaire disponible pour cette équipe.'
+                    : 'Le joueur choisi est éliminé; l’adversaire peut être en lice ou éliminé. Seule l’équipe initiatrice consomme son droit au Phénix.'
+                : !p1Options.length || !p2Options.length
+                    ? 'Il faut au moins un joueur avec des vies dans chaque équipe.'
+                    : eligibleTeams.length
+                        ? `Un duel classique est possible. Le Phénix est disponible pour ${eligibleTeams.map(teamKey => selectedBattle[teamKey].name).join(' et ')}.`
+                        : `Seuls les joueurs encore en vie sont proposés pour un duel classique. Le Phénix exige une équipe en retard avec un membre éliminé${usedTeamNames.length ? `; droit déjà utilisé par ${usedTeamNames.join(' et ')}` : ''}.`;
+        }
+
+        function renderFinishedBattle() {
+            renderTeam(selectedBattle.team1, 'finished-team1-name', 'finished-team1-players', selectedBattle.livesPerPlayer);
+            renderTeam(selectedBattle.team2, 'finished-team2-name', 'finished-team2-players', selectedBattle.livesPerPlayer);
+            document.getElementById('undo-finished').disabled = selectedBattle.historyLength === 0;
+        }
+
+        async function loadState() {
+            setNotice('');
+            const [data, commandData] = await Promise.all([
+                api('/api/control-panel/state'),
+                api('/api/control-panel/commands')
+            ]);
+            battles = data.battles || [];
+            characters = data.characters || [];
+            guilds = data.guilds || [];
+            commands = commandData.commands || [];
+            const previousGuildId = guildSelect.value;
+            guildSelect.replaceChildren();
+            for (const guild of guilds) {
+                const battle = battles.find(item => item.guildId === guild.id);
+                const option = document.createElement('option');
+                option.value = guild.id;
+                option.textContent = `${guild.name} · ${battle ? battle.status : 'aucune bataille'}`;
+                guildSelect.append(option);
+            }
+            if (guilds.some(guild => guild.id === previousGuildId)) guildSelect.value = previousGuildId;
+            else if (guilds.length) guildSelect.value = guilds[0].id;
+            renderBattle();
+            renderAdvancedCommands();
+            authSection.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+            if (!guilds.length) setNotice('Le bot ne voit aucun serveur Discord.', 'error');
+        }
+
+        async function executeBotCommand(commandName, options = {}) {
+            const result = await api('/api/control-panel/command', {
+                method: 'POST',
+                body: JSON.stringify({ guildId: selectedGuildId, commandName, options })
+            });
+            await loadState();
+            const message = [result.message, result.channelName ? `Salon : #${result.channelName}` : '', result.note || '']
+                .filter(Boolean).join(' — ');
+            setNotice(message, 'success');
+            return result;
+        }
+
+        async function runApiAction(path, body, confirmMessage) {
+            if (confirmMessage && !window.confirm(confirmMessage)) return null;
+            setNotice('Action en cours…');
+            const result = await api(path, { method: 'POST', body: JSON.stringify(body) });
+            await loadState();
+            setNotice(result.warning ? `${result.message} ${result.warning}` : result.message, result.warning ? 'error' : 'success');
+            return result;
+        }
+
+        function setPlayerMode(mode) {
+            playerMode = mode;
+            selectedPlayers.clear();
+            document.getElementById('mode-add').classList.toggle('selected', mode === 'add');
+            document.getElementById('mode-remove').classList.toggle('selected', mode === 'remove');
+            document.getElementById('mode-add').setAttribute('aria-pressed', String(mode === 'add'));
+            document.getElementById('mode-remove').setAttribute('aria-pressed', String(mode === 'remove'));
+            document.getElementById('picker-title').textContent = mode === 'add'
+                ? 'Rechercher dans la base de joueurs'
+                : 'Rechercher parmi les joueurs inscrits';
+            document.getElementById('search-label').textContent = mode === 'add' ? 'Nom du joueur à ajouter' : 'Nom du joueur à retirer';
+            document.getElementById('player-search').placeholder = mode === 'add'
+                ? 'Tapez au moins 2 lettres'
+                : 'Chercher parmi les inscrits';
+            document.getElementById('picker-help').textContent = mode === 'add'
+                ? 'Les profils viennent de la base du bot. Recherchez par nom ou par début d’identifiant Discord; les inscrits sont masqués.'
+                : 'La recherche affiche uniquement les joueurs inscrits ou en liste d’attente, par nom ou identifiant.';
+            document.getElementById('player-search').value = '';
+            window.clearTimeout(playerSearchTimer);
+            playerSearchSequence++;
+            renderPlayerSearchMessage('Saisissez au moins 2 lettres pour rechercher.');
+            renderSelection();
+        }
+
+        function renderPlayerSearchMessage(message) {
+            const results = document.getElementById('player-results');
+            results.replaceChildren();
+            const text = document.createElement('p');
+            text.className = 'empty-roster';
+            text.textContent = message;
+            results.append(text);
+            document.getElementById('search-count').textContent = '';
+        }
+
+        function searchPlayers(query) {
+            window.clearTimeout(playerSearchTimer);
+            const normalizedQuery = query.trim();
+            if (normalizedQuery.length < 2) {
+                playerSearchSequence++;
+                renderPlayerSearchMessage('Saisissez au moins 2 lettres pour rechercher.');
+                return;
+            }
+
+            playerSearchTimer = window.setTimeout(async () => {
+                const sequence = ++playerSearchSequence;
+                renderPlayerSearchMessage('Recherche dans la base de données…');
+                try {
+                    const params = new URLSearchParams({
+                        guildId: selectedGuildId,
+                        mode: playerMode,
+                        q: normalizedQuery
+                    });
+                    const data = await api(`/api/control-panel/players?${params}`);
+                    if (sequence !== playerSearchSequence) return;
+                    renderPlayerResults(data.players || []);
+                } catch (error) {
+                    if (sequence === playerSearchSequence) renderPlayerSearchMessage(error.message);
+                }
+            }, 220);
+        }
+
+        function renderPlayerResults(players) {
+            const results = document.getElementById('player-results');
+            results.replaceChildren();
+            document.getElementById('search-count').textContent = players.length ? `${players.length} résultat(s)` : '';
+            if (!players.length) {
+                renderPlayerSearchMessage('Aucun joueur trouvé. Essayez un autre nom ou identifiant.');
+                return;
+            }
+
+            for (const player of players) {
+                const label = document.createElement('label');
+                label.className = 'player-option';
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = selectedPlayers.has(player.id);
+                checkbox.addEventListener('change', () => {
+                    if (checkbox.checked) {
+                        if (selectedPlayers.size >= 5) {
+                            checkbox.checked = false;
+                            setNotice('Vous pouvez traiter au maximum 5 joueurs à la fois.', 'error');
+                            return;
+                        }
+                        selectedPlayers.set(player.id, player);
+                    } else {
+                        selectedPlayers.delete(player.id);
+                    }
+                    renderSelection();
+                });
+                const copy = document.createElement('span');
+                copy.className = 'player-option-copy';
+                const name = document.createElement('strong');
+                name.textContent = player.name;
+                const meta = document.createElement('small');
+                meta.textContent = player.level ? `Niveau ${player.level} · ID ${player.id}` : `ID Discord ${player.id}`;
+                copy.append(name, meta);
+                label.append(checkbox, copy);
+                results.append(label);
+            }
+        }
+
+        function renderSelection() {
+            const count = selectedPlayers.size;
+            document.getElementById('selection-count').textContent = count
+                ? `${count} joueur(s) sélectionné(s)`
+                : 'Aucun joueur sélectionné';
+            const button = document.getElementById('apply-roster');
+            button.disabled = count === 0;
+            button.textContent = count
+                ? `${playerMode === 'add' ? 'Ajouter' : 'Retirer'} ${count} joueur${count === 1 ? '' : 's'}`
+                : `${playerMode === 'add' ? 'Ajouter' : 'Retirer'} les joueurs`;
+        }
+
+        async function applyRosterAction(mode, players) {
+            if (!selectedGuildId || !players.length) return;
+            const action = mode === 'add' ? 'battle-register' : 'battle-unregister';
+            const verb = mode === 'add' ? 'Ajouter' : 'Retirer';
+            const names = players.map(player => player.name).join(', ');
+            if (!window.confirm(`${verb} ${players.length} joueur(s) ${mode === 'add' ? 'à' : 'de'} la Team Battle ?\n${names}`)) return;
+
+            const options = {};
+            players.slice(0, 5).forEach((player, index) => {
+                options[`joueur${index + 1}`] = player.id;
+            });
+            setNotice(`${mode === 'add' ? 'Ajout' : 'Retrait'} des joueurs en cours…`);
+            try {
+                await executeBotCommand(action, options);
+                selectedPlayers.clear();
+                playerSearch.value = '';
+                playerSearchSequence++;
+                renderPlayerSearchMessage('Saisissez au moins 2 lettres pour rechercher.');
+                renderSelection();
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        }
+
+        function renderAdvancedCommands() {
+            const container = document.getElementById('advanced-commands');
+            if (!container) return;
+            const openCommand = container.querySelector('details[open]')?.dataset.command;
+            container.replaceChildren();
+
+            for (const command of commands.filter(item => !primaryCommands.has(item.name))) {
+                const details = document.createElement('details');
+                details.className = 'advanced-command';
+                details.dataset.command = command.name;
+                details.open = command.name === openCommand;
+                const summary = document.createElement('summary');
+                const titleCopy = document.createElement('span');
+                titleCopy.className = 'advanced-command-title';
+                const title = document.createElement('strong');
+                title.textContent = advancedCommandLabels[command.name] || command.name;
+                const description = document.createElement('small');
+                description.textContent = `/${command.name} · ${command.description || ''}`;
+                titleCopy.append(title, description);
+                summary.append(titleCopy);
+                const form = document.createElement('form');
+                form.className = 'advanced-form';
+                form.dataset.command = command.name;
+                const fields = document.createElement('div');
+                fields.className = 'advanced-fields';
+                for (const definition of command.options) {
+                    const field = document.createElement('div');
+                    field.className = 'field';
+                    const id = `advanced-${command.name}-${definition.name}`;
+                    const required = definition.required || (command.name === 'player-profile' && definition.name === 'joueur');
+                    const label = document.createElement('label');
+                    label.htmlFor = id;
+                    label.textContent = `${labels[definition.name] || definition.name}${required ? ' · obligatoire' : ' · facultatif'}`;
+                    let control;
+                    if (definition.type === 5) {
+                        control = document.createElement('input');
+                        control.type = 'checkbox';
+                    } else if (definition.choices?.length) {
+                        control = document.createElement('select');
+                        const placeholder = document.createElement('option');
+                        placeholder.value = '';
+                        placeholder.textContent = 'Choisir une valeur';
+                        control.append(placeholder);
+                        for (const choice of definition.choices) {
+                            const option = document.createElement('option');
+                            option.value = choice.value;
+                            option.textContent = choice.name;
+                            control.append(option);
+                        }
+                    } else {
+                        control = document.createElement('input');
+                        control.type = definition.type === 4 ? 'number' : 'text';
+                        if (definition.type === 4) {
+                            control.step = '1';
+                            if (definition.min_value !== undefined) control.min = definition.min_value;
+                            if (definition.max_value !== undefined) control.max = definition.max_value;
+                        }
+                        if (definition.type === 6) {
+                            control.inputMode = 'numeric';
+                            control.pattern = '\\d{15,22}';
+                            control.placeholder = 'Identifiant Discord';
+                        }
+                    }
+                    control.id = id;
+                    control.required = required && definition.type !== 5;
+                    field.append(label, control);
+                    if (definition.description) {
+                        const help = document.createElement('p');
+                        help.className = 'field-help';
+                        help.textContent = definition.description;
+                        field.append(help);
+                    }
+                    fields.append(field);
+                }
+                if (command.options.length) form.append(fields);
+                else {
+                    const note = document.createElement('p');
+                    note.className = 'advanced-note';
+                    note.textContent = 'Aucune information supplémentaire n’est nécessaire.';
+                    form.append(note);
+                }
+                const submit = document.createElement('button');
+                submit.type = 'submit';
+                submit.textContent = `Exécuter /${command.name}`;
+                form.append(submit);
+                details.append(summary, form);
+                container.append(details);
+            }
+        }
+
+        async function submitAdvancedCommand(form) {
+            const commandName = form.dataset.command;
+            const command = commands.find(item => item.name === commandName);
+            if (!command) return;
+            const confirmations = {
+                'battle-create-direct': 'Créer et démarrer immédiatement cette bataille ?',
+                'battle-refresh-stats': 'Recalculer les statistiques de tous les joueurs à partir des batailles terminées ?',
+                'battle-clean-channel': 'Supprimer les salons vocaux de la dernière bataille terminée ? Cette action est irréversible.'
+            };
+            if (confirmations[commandName] && !window.confirm(confirmations[commandName])) return;
+            const options = {};
+            for (const definition of command.options) {
+                const control = form.querySelector(`#advanced-${commandName}-${definition.name}`);
+                if (!control) continue;
+                if (definition.type === 5) options[definition.name] = control.checked;
+                else if (control.value !== '') {
+                    options[definition.name] = [4, 10].includes(definition.type) ? Number(control.value) : control.value;
+                }
+            }
+
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                await executeBotCommand(commandName, options);
+            } catch (error) {
+                setNotice(error.message, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        document.getElementById('auth-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            token = tokenInput.value.trim();
+            sessionStorage.setItem('controlPanelToken', token);
+            try {
+                await loadState();
+            } catch (error) {
+                authNotice.textContent = error.message;
+                authNotice.className = 'notice error';
+            }
+        });
+
+        document.getElementById('refresh').addEventListener('click', () =>
+            loadState().catch(error => setNotice(error.message, 'error')));
+        document.getElementById('logout').addEventListener('click', () => showLogin());
+        guildSelect.addEventListener('change', () => {
+            selectedPlayers.clear();
+            renderBattle();
+            setPlayerMode('add');
+        });
+        document.getElementById('mode-add').addEventListener('click', () => setPlayerMode('add'));
+        document.getElementById('mode-remove').addEventListener('click', () => setPlayerMode('remove'));
+        playerSearch.addEventListener('input', () => searchPlayers(playerSearch.value));
+        document.getElementById('apply-roster').addEventListener('click', () =>
+            applyRosterAction(playerMode, [...selectedPlayers.values()]));
+
+        document.getElementById('create-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                await executeBotCommand('battle-create', {
+                    date: formatBattleDate(document.getElementById('battle-date').value),
+                    heure: document.getElementById('battle-time').value
+                });
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('next-create-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            try {
+                await executeBotCommand('battle-create', {
+                    date: formatBattleDate(document.getElementById('next-battle-date').value),
+                    heure: document.getElementById('next-battle-time').value
+                });
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('checkin').addEventListener('click', async () => {
+            if (!selectedBattle?.participants?.length) return;
+            if (!window.confirm('Ouvrir l’appel ? Le bot publiera le bouton de présence sur Discord.')) return;
+            try {
+                await executeBotCommand('battle-checkin');
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('start-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            if (!window.confirm('Démarrer la battle avec les joueurs présents ?')) return;
+            try {
+                await executeBotCommand('battle-start', {
+                    equipe1: document.getElementById('team-name-1').value.trim(),
+                    equipe2: document.getElementById('team-name-2').value.trim(),
+                    vies: Number(document.getElementById('lives').value),
+                    manuel: document.getElementById('manual-teams').checked
+                });
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('phoenix').addEventListener('change', renderMatchOptions);
+        document.getElementById('phoenix-team').addEventListener('change', renderMatchOptions);
+        document.getElementById('match-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            if (!selectedBattle) return;
+            try {
+                await runApiAction('/api/control-panel/match', {
+                    guildId: selectedGuildId,
+                    p1: document.getElementById('p1').value,
+                    p2: document.getElementById('p2').value,
+                    char1: document.getElementById('char1').value,
+                    char2: document.getElementById('char2').value,
+                    phoenix: document.getElementById('phoenix').checked,
+                    phoenixTeam: document.getElementById('phoenix-team').value,
+                    swap: document.getElementById('swap').checked
+                });
+                document.getElementById('swap').checked = false;
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('win-p1').addEventListener('click', async () => {
+            if (!selectedBattle) return;
+            try {
+                await runApiAction('/api/control-panel/result', { guildId: selectedGuildId, winner: 'p1' }, 'Confirmer la victoire de l’équipe 1 ?');
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('win-p2').addEventListener('click', async () => {
+            if (!selectedBattle) return;
+            try {
+                await runApiAction('/api/control-panel/result', { guildId: selectedGuildId, winner: 'p2' }, 'Confirmer la victoire de l’équipe 2 ?');
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        for (const id of ['undo', 'undo-finished']) {
+            document.getElementById(id).addEventListener('click', async () => {
+                if (!selectedBattle) return;
+                try {
+                    await runApiAction('/api/control-panel/undo', { guildId: selectedGuildId }, 'Annuler le dernier résultat ? Les vies et statistiques seront restaurées.');
+                } catch (error) {
+                    setNotice(error.message, 'error');
+                }
+            });
+        }
+        document.getElementById('toss').addEventListener('click', async () => {
+            if (!selectedBattle) return;
+            try {
+                await runApiAction('/api/control-panel/toss', { guildId: selectedGuildId });
+            } catch (error) {
+                setNotice(error.message, 'error');
+            }
+        });
+        document.getElementById('advanced-commands').addEventListener('submit', event => {
+            const form = event.target.closest('form[data-command]');
+            if (!form) return;
+            event.preventDefault();
+            submitAdvancedCommand(form);
+        });
+
+        if (token) loadState().catch(error => {
+            if (token) showLogin(error.message);
+        });
+    </script>
+</body>
+</html>

@@ -289,42 +289,29 @@
                 </div>
                 <div class="card-body">
                     <ul>
-                        <li>Format en <span class="gold-text">FT1</span> | Stage <span class="highlight-text">Aléatoire</span></li>
-                        <li><span class="gold-text">2 vies par joueur</span> (ou 3 selon le nombre de participants)</li>
+                        <li>Chaque duel se joue en <span class="gold-text">une manche gagnante (FT1)</span>, sur un stage tiré au sort.</li>
+                        <li>Chaque joueur commence avec <span class="gold-text">2 ou 3 vies</span>, selon le format annoncé. À 0 vie, il est éliminé.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Règle du Vainqueur -->
+            <!-- Déroulement d'un duel -->
             <div class="rule-card">
                 <div class="card-header">
-                    <span class="card-icon">👑</span>
-                    <h2 class="card-title">GAGNANT</h2>
+                    <span class="card-icon">⚔️</span>
+                    <h2 class="card-title">DUEL CLASSIQUE</h2>
                 </div>
                 <div class="card-body">
                     <ul>
-                        <li><span class="highlight-text">Reste sur le terrain</span> obligatoirement avec le <span class="highlight-text">même personnage</span>.</li>
-                        <li><span class="gold-text">Limite 2 victoires :</span> Après 2 victoires d'affilée, il laisse sa place à un coéquipier.</li>
-                        <li>L'équipe gagnante <span class="highlight-text">dévoile son prochain joueur en premier</span>.</li>
+                        <li>Le tirage désigne la première équipe à envoyer son joueur; l’autre a le contre-choix.</li>
+                        <li><span class="highlight-text">Gagnant :</span> il reste avec le même personnage. Après 2 victoires de suite, il passe la main.</li>
+                        <li><span class="highlight-text">Perdant :</span> il perd 1 vie. S’il lui en reste, il peut rejouer ou passer son tour; changer de personnage est autorisé en cas de revanche.</li>
+                        <li>Au duel suivant, l’équipe gagnante annonce son joueur en premier.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- Règle du Perdant -->
-            <div class="rule-card">
-                <div class="card-header">
-                    <span class="card-icon">💀</span>
-                    <h2 class="card-title">PERDANT</h2>
-                </div>
-                <div class="card-body">
-                    <ul>
-                        <li><span class="gold-text">Perd 1 vie</span> | Choix : <span class="highlight-text">Rematch</span> OU <span class="highlight-text">laisser sa place</span>.</li>
-                        <li><span class="gold-text">Changement de personnage autorisé</span> en cas de Rematch.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- Résurrection du Phoenix -->
+            <!-- Règle du Phénix -->
             <div class="rule-card highlight">
                 <div class="card-header">
                     <span class="card-icon">🔥</span>
@@ -332,25 +319,28 @@
                 </div>
                 <div class="card-body">
                     <ul>
-                        <li><span class="gold-text">Condition :</span> Se déclenche si une équipe a <span class="highlight-text">2 joueurs éliminés</span> et l'autre <span class="highlight-text">1 joueur éliminé</span>.</li>
-                        <li>Match FT1 entre 2 éliminés : le gagnant revient avec <span class="gold-text">1 vie</span>. <span class="badge-info">1 FOIS PAR TEAM BATTLE</span></li>
+                        <li>Disponible <span class="gold-text">1 fois par équipe</span> si elle a moins de vies au total que l’adversaire et au moins 1 joueur éliminé.</li>
+                        <li>L’équipe choisit d’abord son joueur éliminé, puis n’importe quel adversaire (en vie ou éliminé).</li>
+                        <li><span class="gold-text">Victoire :</span> le joueur choisi revient avec 1 vie. Un adversaire vivant perd 1 vie; un adversaire éliminé le reste.</li>
+                        <li><span class="gold-text">Défaite :</span> le joueur choisi reste éliminé. Un adversaire vivant garde ses vies; un adversaire éliminé revient avec 1 vie sans utiliser le droit de son équipe.</li>
                     </ul>
                 </div>
             </div>
 
-            <div class="rule-card highlight">
+            <!-- Équilibrage des équipes -->
+            <!--<div class="rule-card highlight">
                 <div class="card-header">
                     <span class="card-icon">⚖️</span>
                     <h2 class="card-title" style="color: #ffd700;">JUGEMENT DE LA BALANCE</h2>
                 </div>
                 <div class="card-body">
                     <ul>
-                        <li><span class="gold-text">Déséquilibre numérique :</span> En cas d'effectifs inégaux, l'ajustement des vies est soumis au <span class="highlight-text">vote des équipes</span>.</li>
-                        <li><span class="gold-text">La Sanction :</span> L'équipe en sous-nombre vote pour retirer <span class="highlight-text">1 vie</span> au joueur adverse de son choix.</li>
-                        <li><span class="gold-text">Le Renfort :</span> L'équipe en surnombre vote pour désigner le joueur adverse qui recevra les <span class="highlight-text">vies d'équilibrage</span>.</li>
+                        <li>Si les équipes n’ont pas le même nombre de joueurs, la Balance ajuste leurs vies.</li>
+                        <li>Un joueur de l’équipe la plus nombreuse perd <span class="gold-text">1 vie</span>.</li>
+                        <li>Un joueur de l’équipe la moins nombreuse reçoit le nombre de vies nécessaire pour égaliser le total des équipes.</li>
                     </ul>
                 </div>
-            </div>
+            </div>-->
 
             <!-- Bloc Amusez-vous -->
             <div class="rule-card fun-card">
